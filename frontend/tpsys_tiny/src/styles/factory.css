@@ -1,0 +1,9 @@
+.factory {
+  margin-top: 4rem;
+
+}
+
+.factory__lines {
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "rest-shop",
+  "version": "1.0.0",
+  "description": "Niklas test node api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "node",
+    "restful"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.4.0",
+    "express": "^4.16.4",
+    "graphql-subscriptions": "^1.0.0",
+    "graphql-yoga": "^1.17.4",
+    "grpc": "^1.24.2",
+    "grpc-promise": "^1.4.0",
+    "lodash": "^4.17.11",
+    "readline": "^1.3.0",
+    "sharp": "^0.23.4"
+  }
+}

@@ -1,0 +1,31 @@
+:root {
+  --profile-lochmara-color: #0086bf; /*rgb(0,134,191)*/
+
+  --accent-atlantis-color: #99cc33;
+  --accent-atlantis-color-rgb: rgb(153,204,51);
+  --accent-fungreen-color: #006633;
+  --accent-fungreen-color-rgb: rgb(0,102,51);
+  --accent-pompadour-color: #660066;
+  --accent-lipstick-color: #cc0066;
+  --accent-orangepeel-color: #ff9900;
+  --accent-midnightblue-color: #003366;
+  --accent-bahamablue-color: #006699;
+  --accent-malibu-color: #66ccff;
+
+  --gray1-color: #222;
+  --gray2-color: #363636;
+  --gray3-color: #555;
+  --gray4-color: #878787;
+  --gray5-color: #a2a2a2;
+  --gray6-color: #bdbdbd;
+  --gray7-color: #d8d8d8;
+  --gray75-color: #eaeaea;
+  --gray8-color: #f3f3f3;
+
+  --alice-blue-color: #f0f7ff;
+  --white-color: #fff;
+  --black-color: #000;
+
+  --site-bg-color: #eceff1;
+  --drawer-bg-color: #cfd8dc;
+}

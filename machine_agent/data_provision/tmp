@@ -1,0 +1,11 @@
+subscription {
+  productionEngine {
+    state
+    batchId
+    batchSize
+    boardsCompleted
+    componentsPerBoard
+    componentsMissing
+    componentsLeft
+  }
+}

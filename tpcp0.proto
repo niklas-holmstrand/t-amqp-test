@@ -1,0 +1,221 @@
+//
+//  TpCp ...TBD
+//
+syntax = "proto3";
+
+
+package tpcp0;
+
+// The TPSys service definition.
+service TPSysService {
+
+  // Status handling
+  rpc getProdEngineStatus(Dummy) returns (ProductionEngineStatus) {}
+  rpc getMagazineStatus(Dummy) returns (MagazineStatus) {}
+  rpc getNotificationStatus(Dummy) returns (NotificationStatus) {}
+  rpc getImageFromFeeder(Dummy) returns (FeederImageRsp) {}
+  rpc getImageFromFeederOffset(FeederImageReq) returns (FeederImageRsp) {}
+  rpc moveCamX(MoveCamXReq) returns (MoveCamXRsp) {}
+
+  rpc subscribeProdEngineStatus(Dummy) returns (stream ProductionEngineStatus) {}
+  rpc subscribeMagazineStatus(Dummy) returns (stream MagazineStatus) {}
+  rpc subscribeNotificationStatus(Dummy) returns (stream NotificationStatus) {}
+  rpc subscribeCameraImages(Dummy) returns (stream FeederImageRsp) {}
+
+  // Cmd/Rsp
+  rpc cmdSwitchToTUI(CmdSwitchToTUI) returns (RspSwitchToTUI) {}
+  rpc cmdPlay(CmdPlay) returns (RspPlay) {}
+  rpc cmdPause(CmdPause) returns (RspPause) {}
+  rpc cmdStop(CmdStop) returns (RspStop) {}
+  rpc cmdStartBatch(CmdStartBatch) returns (RspStartBatch) {}
+
+  // Notification Query Responses
+  rpc cmdNqrLoadBoard(CmdNqrLoadBoard) returns (RspNqrLoadBoard) {}
+  rpc cmdNqrRemoveBoard(CmdNqrRemoveBoard) returns (RspNqrRemoveBoard) {}
+  rpc cmdNqrUnloadAnyLoadedBoard(CmdNqrUnloadAnyLoadedBoard) returns (RspNqrUnloadAnyLoadedBoard) {}
+}
+
+/////////////////////////////////////////////////////////////////////
+// ProductionEngine status
+/////////////////////////////////////////////////////////////////////
+
+message ProductionEngineStatus {
+  ProductionEngineState state = 1;
+  string batchId = 2;               // Unique id for this batch
+  string layoutName = 3;            // Currently loaded layout
+  int32 batchSize = 4;              // Number of boards in this batch
+  int32 boardsCompleted = 5;        // No boards completed since batch start
+  int32 componentsPerBoard = 6;     // No components to be placed by this machine per board
+  int32 componentsLeft = 7;         // No components still to be mounted on current board
+  int32 componentsMissing = 8;      // No components not available for competion of board
+}
+
+enum ProductionEngineState {
+    Unknown = 0;
+    Stopped = 1;    // No batch defined
+    Paused = 2;     // Batch defined but no actions are taken
+    Running = 3;    // Working or waiting for boards
+}
+
+/////////////////////////////////////////////////////////////////////
+// Magazine slots
+/////////////////////////////////////////////////////////////////////
+
+message MagazineStatus {
+  repeated MagazineSlot magSlots = 1;
+}
+
+message MagazineSlot {
+  MagazineSlotState state = 1;
+  string name = 2;                // Name of any magazine present, id read by tpsys and 
+                                  // translated to name given by user
+  int32 slotNo = 3;               // Slot number corresponding to printed numbers on machine
+}
+
+enum MagazineSlotState {
+  UnknownMagazineSlotState = 0;
+  Empty = 1;        // No magazine inserted
+  Present= 2;       // Magazine inserted and identified
+  Active = 3;       // Activated by button. LED is on.
+  Used = 4;         // Activated and includes components needed by layout
+  NotYetPicked = 5; // Used and includes components needed to complete current board
+}
+
+/////////////////////////////////////////////////////////////////////
+// Feeder Image
+/////////////////////////////////////////////////////////////////////
+
+message FeederImageRsp {
+  string feederImgBase64 = 1;
+  int32 x = 2;
+  int32 y = 3;
+}
+
+message FeederImageReq {
+  int32 machineId = 1;
+  int32 x = 2;
+  int32 y = 3;
+}
+
+message MoveCamXReq {
+  int32 x = 1;
+}
+
+message MoveCamXRsp {
+  bool result = 1;
+}
+  
+/////////////////////////////////////////////////////////////////////
+// Notifications
+/////////////////////////////////////////////////////////////////////
+
+message NotificationStatus {
+  repeated Notification notifications = 1;
+}
+  
+message Notification {
+  NotificationType type = 1;
+  NotificationSeverity severity = 2;
+  repeated string runtimeData = 3;  // Array of strings with language independent runtime 
+                                    // information such as what component is missing. Contents of 
+                                    // runtimeData is specified per NotificationType
+  int32 id = 4;
+}
+
+// NOTE!! NotificationType must be exact in sync with corresponding GraphQl-schema!
+enum NotificationType {
+  UnknownNotificationType = 0;
+  LoadBoardRequest = 1;               // Waiting for board to be manually loaded. Blocked 
+                                      // until loadboard command is received.
+                                      // Severity = Query
+                                      // No data
+  RemoveBoardRequest = 2;             // Waiting for board to be manually removed. Blocked 
+                                      // until removeboard command is received.
+                                      // Severity = Query
+                                      // No data
+  UnloadAnyLoadedBoardRequest = 3;    // Waiting for operator to confirm if there is any board for TPSys to unload by running conveyor.
+                                      // Blocked until UnloadAnyLoadedBoard command is received.
+                                      // Severity = Query
+                                      // No data
+  ComponentNotAvailable = 4;          // A component needed to complete board is missing
+                                      // Severity = OperatorAlert
+                                      // runtimeData: 
+                                      // 1: ComponentName
+                                      // 2: Components comment
+                                      // 3: Default inventory location
+                                      // 4: Missing quantity to finish batch
+  ComponentNoHydraTool = 5;           // A component that should have an allowed hydra tool dont have one
+                                      // Severity = OperatorAlert
+                                      // runtimeData: 
+                                      // 1: ComponentName
+  WaitingForBoardToBeLoaded = 6;      // Waiting for board to be loaded to Y-wagon conveyor from upstream conveyor
+                                      // Severity = OperatorInfo
+                                      // No data
+  WaitingForBoardToBeUnloaded = 7;    // Waiting for board to be unloaded from Y-wagon conveyor to downstream conveyor
+                                      // Severity = OperatorInfo
+                                      // No data
+  WaitingForBoardToBeChanged = 8;     // Waiting for Y-wagon conveyor to unload old board and load new board
+                                      // Severity = OperatorInfo
+                                      // No data
+  UnknownOperatorAlert = 9;           // Notification representing any operator alert not represented in TpCp
+                                      // Severity = OperatorAlert
+                                      // runtimeData: 
+                                      // 1: internal tpsys type number of this alert
+  IoConveyorErrorLeft = 10;           // There is an error in the left IO-conveyor system, needs to be handled manually
+                                      // Severity = OperatorAlert
+                                      // runtimeData: -
+  IoConveyorErrorRight = 11;          // There is an error in the right IO-conveyor system, needs to be handled manually
+                                      // Severity = OperatorAlert
+                                      // runtimeData: -
+  TimeForPreventiveMaintenence = 12;  // Time for preventive maintenence
+                                      // Severity = OperatorAlert
+                                      // runtimeData: -
+  VisionDisabled = 13;                // Optical vision disabled. Expect bad accuracy
+                                      // Severity = OperatorAlert
+                                      // runtimeData: -
+}
+
+
+enum NotificationSeverity {
+  UnknownNotificationSeverity = 0;
+  OperatorAlert = 1;          // Status that should be handled by operator. Notification dissapears spontaneoulsy 
+                              // when status ends. 	
+  Query = 2;                  // Machine is blocked until user/clinet responds to question with corresponding cmd
+  OperatorInfo = 3;           // Information to the operator which requires no action, e.g. "Loading board". The notification
+                              // disappears spontaneously when the status ends.
+}
+
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
+
+message Dummy {
+  int32 n = 1;
+}
+
+message CmdStartBatch {
+    string batchId = 1;               // Unique id for this batch
+    string layoutName = 2;            // Currently loaded layout
+    int32 batchSize = 3;              // Number of boards in this batch
+}
+message RspStartBatch {int32 errCode = 1; string errMsg = 2;}
+
+message CmdSwitchToTUI {}
+message RspSwitchToTUI {int32 errCode = 1; string errMsg = 2;}
+message CmdPlay {}
+message RspPlay {int32 errCode = 1; string errMsg = 2;}
+message CmdPause {}
+message RspPause {int32 errCode = 1; string errMsg = 2;}
+message CmdStop {}
+message RspStop {int32 errCode = 1; string errMsg = 2;}
+  
+message CmdNqrLoadBoard { bool ok = 1;} // ok = True: board have been loaded, start proceed. ok = False: No board have been loaded. Pause production.
+message RspNqrLoadBoard {int32 errCode = 1; string errMsg = 2;}
+message CmdNqrRemoveBoard {}
+message RspNqrRemoveBoard {int32 errCode = 1; string errMsg = 2;}
+
+message CmdNqrUnloadAnyLoadedBoard {
+    bool ok = 1;                       // True if ok to proceed else pause production engine. If true; unload board (if board exists) or assume board not present (if board does not exist)
+    bool boardToUnloadExists = 2;      // True if operator observes a board to be unloaded, false otherwise. 
+}
+message RspNqrUnloadAnyLoadedBoard {int32 errCode = 1; string errMsg = 2;}

@@ -1,0 +1,48 @@
+.ctrl-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(255,255,255,.6);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 2rem;
+  border-top: solid 1px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.ctrl-panel .ctrl-action {
+  margin: 0 .25rem;
+  border: solid 1px rgba(0,0,0,.1)
+}
+
+.ctrl-action.ctrl-action--small {
+  margin: 0 .5rem;
+  padding: .5rem;
+}
+
+.ctrl-action.ctrl-action--small svg {
+  font-size: 1rem;
+}
+
+.ctrl-panel .ctrl-panel__switch {
+  position: absolute;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 3rem;
+}
+
+.ctrl-panel .ctrl-panel__label  {
+  font-size: .625rem;
+  margin-bottom: -.5rem;
+}
+
+.ctrl-switch {
+  transform: scale(.75);
+}
+

@@ -1,0 +1,163 @@
+.props-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+.props-wrapper .loader {
+  display: none;
+}
+.props-wrapper.props-wrapper--loading .loader {
+  display: block;
+}
+.props-wrapper.props-wrapper--loading .section,
+.props-wrapper.props-wrapper--loading .machine__status {
+  display: none;
+}
+
+.section {
+  z-index: 1;
+  display: flex;
+  flex-flow: row wrap;
+  position: relative;
+  padding: 2rem; /* variant with 1rem in CDP */
+  border-top: solid 1px rgba(0,0,0,0.1);
+}
+.section.section--header {
+  border-top: none;
+}
+.section.section--noborder {
+  border: none;
+}
+.section.section--notop {
+  border: none;
+  padding-top: 0;
+}
+.section.section--header .props:first-child .props__value {
+  font-size: 1.2rem;
+}
+
+
+.section__header {
+  font-size: .825rem;
+  color: rgba(0,0,0,.6);
+  display: flex;
+  margin-bottom: 1.25rem;
+}
+
+/* label, value pair */
+.props {
+  display: flex;
+  flex-flow: column nowrap;
+  flex-grow: 1;
+}
+.props.props--link {
+  cursor: pointer;
+}
+
+.section .props:nth-child(even) {
+  align-items: flex-end;
+}
+
+.section .machines .props {
+  padding: 1rem 0;
+  border-bottom: solid 1px rgba(0,0,0,0.1);
+}
+.section .machines .props:first-child {
+  padding-top: 0;
+}
+.section .machines .props:nth-child(even) {
+  align-items: unset;
+}
+.section .machines .props:last-child {
+  padding-bottom: 0;
+  border: none;
+}
+
+/* variant where props label and value are placed horizontally (CDP) */
+.section.section--horizontal .props {
+  align-items: baseline;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: .125rem;
+}
+.section.section--horizontal .props:not(:first-child) .props__label,
+.section.section--horizontal .props:not(:first-child) .props__value {
+  font-weight: 300;
+  font-size: .725rem;
+  opacity: .87;
+}
+
+.section.section--wrap {
+  padding-bottom: 1rem;
+}
+.section.section--wrap .props {
+  width: 50%;
+  margin-bottom: 1rem;
+}
+
+.section.section--col {
+  flex-flow: column nowrap;
+}
+
+.props__label {
+  font-size: .825rem;
+  color: rgba(0,0,0,.6);
+  display: flex;
+  margin-bottom: .125rem;
+}
+.props__label svg {
+  font-size: 1rem;
+  opacity: .6;
+  margin-left: .25rem;
+}
+.props__value {
+  display: flex;
+  align-items: baseline;
+  font-size: .875rem;
+  font-weight: 500;
+}
+.props__secondary {
+  font-weight: 300;
+  font-size: .725rem;
+  opacity: .87;
+}
+.props__secondary.props__secondary--flex {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PnP variant */
+.props-wrapper .props__secondary {
+  text-transform: uppercase;
+  margin-top: .125rem;
+}
+
+.props__info {
+  display: flex;
+  align-items: center;
+  font-weight: 300;
+  font-size: .875rem;
+}
+.props__info svg {
+  margin-right: .5rem;
+  color: var(--gray7-color);
+}
+
+/* wrapper for values with separator */
+.props-data {
+  display: flex;
+  align-items: baseline;
+}
+.props-data__value {
+  font-size: 1.425rem;
+}
+.props-data__sep {
+  font-weight: 200;
+  margin: 0 .2rem;
+}
+.props-data__base {
+  font-weight: 300;
+  font-size: .875rem;
+}

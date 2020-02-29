@@ -1,0 +1,38 @@
+.board-progress {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.board-progress__label {
+  position: absolute;
+  font-weight: 500;
+  font-size: 1.225rem;
+  color: rgba(0,0,0,.87);
+}
+.board-progress__label.board-progress__label--role {
+  font-weight: 400;
+  font-size: 1.225rem;
+  color: rgba(0,0,0,.38);
+}
+
+.board-progress-indicator {
+  transform: rotate(-90deg);
+  fill: transparent;
+  stroke-linecap: round;
+}
+
+.board-progress-indicator .board-progress-indicator__bg {
+  stroke: rgba(0,0,0,.04);
+}
+
+.board-progress-indicator .board-progress-indicator__stroke {
+  transition: stroke 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms
+}
+.board-progress-indicator .board-progress-indicator__stroke.board-progress-indicator__stroke--running {
+  stroke: var(--accent-malibu-color);
+}
+.board-progress-indicator .board-progress-indicator__stroke.board-progress-indicator__stroke--paused {
+  stroke: var(--accent-orangepeel-color);
+}

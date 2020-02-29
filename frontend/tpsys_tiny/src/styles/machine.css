@@ -1,0 +1,234 @@
+/* machine card in factory view */
+
+.machine {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #fff;
+  border: solid 1px var(--gray75-color);
+  padding: 1rem;
+
+  border-radius: 20%; /*.25rem;*/
+  text-decoration: none;
+  width: 8rem;
+  min-height: auto;
+
+  margin-right: 1rem;
+  margin-bottom: 3rem;
+
+  /* mui */
+  transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+  box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms, border 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+
+  /*box-shadow: 0px 1px 5px 0px rgba(0, 0, 0, 0.05), 0px 2px 2px 0px rgba(0, 0, 0, 0.035), 0px 3px 1px -2px rgba(0, 0, 0, 0.03);*/
+  box-shadow: 0 0 8px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* it's a link .. */
+.machine:visited,
+.machine:link,
+.machine:active {
+  color: inherit;
+}
+.machine:hover {
+  background-color: white;
+  box-shadow: 0 0 8px 0 rgba(102,204,255, 0.2), 0 0 4px 0 rgba(102,204,255, 0.1), 0 0 1px 0 rgba(102,204,255, 0.05);
+}
+
+.machine--selected, .machine--selected.machine--offline {
+  border: solid 1px rgba(102,204,255,.6);
+}
+.machine--selected .machine__place {
+  color: var(--accent-malibu-color);
+  font-weight: 500;
+  background-color: #fefefe;
+  border: solid 1px rgba(102,204,255,.38);
+}
+
+.machine--offline {
+  background-color: #fefefe;
+  box-shadow: none;
+  border: solid 1px var(--site-bg-color);
+}
+.machine--offline .machine__progress {
+  opacity: .08;
+  margin-bottom: .5rem;
+}
+.machine--offline .machine__progress svg {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+.machine--offline .machine__place {
+  opacity: .6;
+}
+.machine--offline .machine__label {
+  opacity: .6;
+}
+
+/* loading */
+.machine .loader {
+  display: none;
+}
+.machine.machine--loading .loader {
+  display: block;
+}
+.machine--loading {
+  min-height: 8rem;
+}
+.machine--loading .machine__progress {
+  display: none;
+}
+.machine--loading .machine__name {
+  display: none;
+}
+.machine--loading .machine__state {
+  display: none;
+}
+
+
+
+/* card elements */
+.machine__progress {
+  margin-bottom: .5rem;
+}
+
+.machine__progress svg {
+
+}
+
+.machine__place {
+  z-index: -1;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  width: 45%;
+
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -70%);
+  font-size: .625rem;
+  background-color: rgba(0,0,0,.05);
+  padding: .25rem .5rem .75rem;
+  border-radius: .25rem;
+  color: rgba(0,0,0,.87);
+  transition: color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms, border 50ms cubic-bezier(0.4, 0, 0.2, 1) 0ms, background-color 50ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+}
+
+.machine__label {
+  display: flex;
+  align-items: baseline;
+  font-size: .95rem;
+}
+.machine__label .machine__state {
+  transform: translateY(3%);
+}
+
+.machine__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 4.5rem;
+}
+
+.machine__state {
+  margin-left: .5rem;
+  height: .625rem;
+  width: .625rem;
+  border: solid 2px rgba(0,0,0,.16);
+  background-color: rgba(0,0,0,.16);
+  border-radius: 50%;
+}
+.machine__state.machine__state--paused {
+  border-color: var(--accent-orangepeel-color);
+  background-color: var(--accent-orangepeel-color);
+}
+.machine__state.machine__state--running {
+  border-color: var(--accent-malibu-color);
+  background-color: var(--accent-malibu-color);
+}
+.machine__state.machine__state--stopped{
+  border-color: var(--gray6-color);
+  background-color: var(--gray6-color);
+}
+.machine__state.machine__state--off-line {
+  background-color: transparent;
+  border-color: rgba(0,0,0,.16);
+}
+
+
+
+/* notification in card */
+.machine .machine__notification {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: .8rem;
+  width: .8rem;
+  border-radius: 50%;
+  background-color: var(--accent-lipstick-color);
+  border: solid 2px var(--accent-lipstick-color);
+  opacity: .87;
+  box-shadow: 0 0 6px 0 rgba(204,0,102, 0.50);
+}
+
+
+
+/* props specific stuff */
+
+.machine__status {
+  text-transform: uppercase;
+  font-size: .6rem;
+}
+
+.machine__status.machine__status--paused {
+  color: var(--accent-orangepeel-color);
+}
+.machine__status.machine__status--running {
+  color: var(--accent-malibu-color);
+}
+
+.props .machine__btn-not {
+  position: absolute;
+  top: 1.25rem;
+  right: .5rem;
+}
+
+.machine__btn-not svg {
+  /*color: var(--accent-lipstick-color);*/
+  color: rgba(204,0,102, 0.87);
+}
+
+.machine-props__notification {
+  position: absolute;
+  top: 2rem;
+  right: 1.35rem;
+}
+.machine-props__notification.machine-props__notification--high {
+  color: var(--accent-lipstick-color);
+}
+.machine-props__notification.machine-props__notification--none {
+  color: rgba(0,0,0,.16);
+}
+
+.machine-props__bulb {
+  display: inline-flex;
+  margin: 0 .35rem 0 .5rem;
+  height: .5rem;
+  width: .5rem;
+  background-color: rgba(0,0,0,.16);
+  border-radius: 50%;
+}
+.machine-props__bulb.machine-props__bulb--paused {
+  background-color: var(--accent-orangepeel-color);
+}
+.machine-props__bulb.machine-props__bulb--running {
+  background-color: var(--accent-malibu-color);
+}
+.machine-props__bulb.machine-props__bulb--offline {
+  background-color: transparent;
+  border: solid 2px rgba(0,0,0,.16);
+}
