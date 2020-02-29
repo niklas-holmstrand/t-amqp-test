@@ -4,7 +4,7 @@
  */
 var readline = require('readline');
 
-var PROTO_PATH = '../tpcp0.proto';
+var PROTO_PATH = '../tunnel.proto';
 
 var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
@@ -17,7 +17,7 @@ var packageDefinition = protoLoader.loadSync(
         defaults: true,
         oneofs: true
     });
-var myProto = grpc.loadPackageDefinition(packageDefinition).tpcp0;
+var myProto = grpc.loadPackageDefinition(packageDefinition).tunnel;
 
 var prodEngineSubscription = null;
 var magSubscription = null;
@@ -74,196 +74,276 @@ var imageFeederObj = {
 
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
+const pb_schema = require("../tpcp0_pb");
 
-function getProdEngineStatus(call, callback) {
-    console.log("GetProdEngineStatus")
-    callback(null, myProductionEngine);
+function str2buf(str) {
+    var arr = str.split(","), view = new Uint8Array(arr);
+    return view.buffer
 }
 
-function getMagazineStatus(call, callback) {
-    console.log("GetMagazineStatus")
-    const msg = { magSlots: myMagSlots }
-    callback(null, msg);
-}
+function handleCmd(call, callback) {
 
-function getNotificationStatus(call, callback) {
-    console.log("getNotificationStatus")
-    const msg = { notifications: myNotifications }
-    callback(null, msg);
-}
+    console.log(" call.request ", call);
+    tbytes = call.request.requestMsg;
+    // temp dirty, received as string, convert back to bytes....TBD
+    bytes = str2buf(tbytes);
+    const recCmdMsg = pb_schema.CmdMsg.deserializeBinary(bytes);
+    console.log("recCmdMsg ", recCmdMsg)
 
-function getImageFromFeeder(call, callback) {
-  console.log("getImageFromFeeder");
 
-  let originalImage = "./resources/reference.jpg";
+    console.log("##2 recCmdMsg", recCmdMsg.getCmdtype());
 
-  sharp(originalImage)
-    .extract({
-      width: 500,
-      height: 500,
-      left: 800,
-      top: 750
-    })
-    .toBuffer()
-    .then(buffer => {
-        const msg = {
-          feederImgBase64: `data:image/png;base64,${buffer.toString("base64")}`,
-          x: 800,
-          y: 750
-        };
-        callback(null, msg);
-    }
-    );
-}
+    const rspMsg = new pb_schema.RspMsg();
 
-function getImageFromFeederOffset(call, callback) {
-  console.log("getImageFromFeederOffset");
+    switch(recCmdMsg.getCmdtype()) {
+        case pb_schema.cmdMsgType.CMDSTARTBATCHTYPE:
+            const reccmdStartBatch = recCmdMsg.getCmdstartbatch();
 
-  const referenceLeft = 800;
-  const referenceTop = 750;
+            console.log(reccmdStartBatch.toString())
+            console.log(reccmdStartBatch.getLayoutname())
+            console.log(reccmdStartBatch.getBatchsize())
 
-  const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
-  const newTop =  call.request.y > 0 ? call.request.y : referenceTop;
+            // send response
 
-  nxGl = newLeft;
-  //refLeft = refLeft + newLeft;
 
-  console.log(`new left je: ${newLeft}`);
+            const rspStartBatch = new pb_schema.RspStartBatch();
+            rspStartBatch.setErrcode(0);
+            rspStartBatch.setErrmsg("ok");
+            rspMsg.setRspstartbatch(rspStartBatch);
+            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDSTARTBATCHTYPE);
+            bytes = rspMsg.serializeBinary();
+    
+            console.log("### respond bytes", bytes)
+            return callback(null, { responseMsg: bytes });
 
-  let originalImage = "./resources/reference.jpg";
+            break;
+        case pb_schema.cmdMsgType.CMDPAUSETYPE:
+            const reccmdPause = recCmdMsg.getCmdpause();
 
-  sharp(originalImage)
-    .extract({
-      width: 500,
-      height: 500,
-      left: newLeft,
-      top: newTop
-    })
-    .toBuffer()
-    .then(buffer => {
-        console.log(`after crop`)
-        const msg = {
-          feederImgBase64: `data:image/jpg;base64,${buffer.toString("base64")}`,
-          x: newLeft,
-          y: newTop
-        };
-        callback(null, msg);
-    }
-    );
-}
+            console.log("Pausing")
 
-function moveCamX(call, callback) {
-  console.log("moveCamX");
+            // send response
 
-  const referenceLeft = 800;
 
-  const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
+            const rspPause = new pb_schema.RspPause();
+            rspPause.setErrcode(0);
+            rspPause.setErrmsg("ok");
+            rspMsg.setRsppause(rspPause);
+            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPEPAUSE);
+            bytes = rspMsg.serializeBinary();
+    
+            console.log("### respond bytes", bytes)
+            return callback(null, { responseMsg: bytes });
 
-  nxGl = newLeft;
-  callback(null, { result: true });
-}
-
-function cmdStartBatch(call, callback) {
-    if (myProductionEngine.state != 'Stopped') {
-        return callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+            break;
     }
 
-    myProductionEngine.state = 'Paused';
-    myProductionEngine.batchId = call.request.batchId;
-    myProductionEngine.layoutName = call.request.layoutName;
-    myProductionEngine.batchSize = call.request.batchSize;
 
-    myProductionEngine.boardsCompleted = 0;
-    myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
+    // if (myProductionEngine.state != 'Stopped') {
+    //     return callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+    // }
 
-    return callback(null, { errCode: 0, errMsg: '' });
-}
+    // myProductionEngine.state = 'Paused';
+    // myProductionEngine.batchId = call.request.batchId;
+    // myProductionEngine.layoutName = call.request.layoutName;
+    // myProductionEngine.batchSize = call.request.batchSize;
 
-function cmdPlay(call, callback) {
-    if (myProductionEngine.state != 'Paused') {
-        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-        return;
-    }
+    // myProductionEngine.boardsCompleted = 0;
+    // myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
 
-    myProductionEngine.state = 'Running';
-    callback(null, { errCode: 0, errMsg: '' });
-    return;
-}
-
-function cmdPause(call, callback) {
-    if (myProductionEngine.state != 'Running') {
-        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-        return;
-    }
-
-    myProductionEngine.state = 'Paused';
-    callback(null, { errCode: 0, errMsg: '' });
-}
-
-function cmdStop(call, callback) {
-    if (myProductionEngine.state != 'Paused') {
-        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-        return;
-    }
-
-    myProductionEngine.state = 'Stopped';
-    myProductionEngine.batchId = '';
-    myProductionEngine.layoutName = '';
-    myProductionEngine.batchSize = 0;
-    callback(null, { errCode: 0, errMsg: '' });
-}
-
-function cmdNqrLoadBoard(call, callback) {
-
-    if(waitingForBoard) {
-        waitingForBoard = false;
-        removeNotification(100);
-
-        if(call.request.ok) {
-            console.log('Board loaded')
-        } else {
-            console.log('Board not loaded, pause')
-            myProductionEngine.state = 'Paused';
-        }
-
-    } else {
-        console.log('unexpected CmdNqrLoadBoard')
-        callback(null, { errCode: -1, errMsg: 'Unexpected CmdNqrLoadBoard' });
-        return;
-    }
-    callback(null, { errCode: 0, errMsg: '' });
+    // return callback(null, { errCode: 0, errMsg: '' });
 }
 
 
+// function getProdEngineStatus(call, callback) {
+//     console.log("GetProdEngineStatus")
+//     callback(null, myProductionEngine);
+// }
 
-function subscribeProdEngineStatus(call, callback) {
-    console.log('subs PE');
-    prodEngineSubscription = call;
-    prodEngineSubscription.write(myProductionEngine);
-}
+// function getMagazineStatus(call, callback) {
+//     console.log("GetMagazineStatus")
+//     const msg = { magSlots: myMagSlots }
+//     callback(null, msg);
+// }
 
-function subscribeMagazineStatus(call, callback) {
-    console.log('subs mags');
-    magSubscription = call;
+// function getNotificationStatus(call, callback) {
+//     console.log("getNotificationStatus")
+//     const msg = { notifications: myNotifications }
+//     callback(null, msg);
+// }
 
-    const msg = { magSlots: myMagSlots }
-    magSubscription.write(msg);
-}
+// function getImageFromFeeder(call, callback) {
+//   console.log("getImageFromFeeder");
 
-function subscribeNotificationStatus(call, callback) {
-    console.log('subs notif');
-    notSubscription = call;
+//   let originalImage = "./resources/reference.jpg";
 
-    const msg = { notifications: myNotifications }
-    notSubscription.write(msg);
-}
+//   sharp(originalImage)
+//     .extract({
+//       width: 500,
+//       height: 500,
+//       left: 800,
+//       top: 750
+//     })
+//     .toBuffer()
+//     .then(buffer => {
+//         const msg = {
+//           feederImgBase64: `data:image/png;base64,${buffer.toString("base64")}`,
+//           x: 800,
+//           y: 750
+//         };
+//         callback(null, msg);
+//     }
+//     );
+// }
 
-function subscribeCameraImages(call, callback) {
-    console.log('subs subscribeCameraImages');
-    cameraImagesSubscription = call;
+// function getImageFromFeederOffset(call, callback) {
+//   console.log("getImageFromFeederOffset");
 
-    sendFeederImage();
-}
+//   const referenceLeft = 800;
+//   const referenceTop = 750;
+
+//   const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
+//   const newTop =  call.request.y > 0 ? call.request.y : referenceTop;
+
+//   nxGl = newLeft;
+//   //refLeft = refLeft + newLeft;
+
+//   console.log(`new left je: ${newLeft}`);
+
+//   let originalImage = "./resources/reference.jpg";
+
+//   sharp(originalImage)
+//     .extract({
+//       width: 500,
+//       height: 500,
+//       left: newLeft,
+//       top: newTop
+//     })
+//     .toBuffer()
+//     .then(buffer => {
+//         console.log(`after crop`)
+//         const msg = {
+//           feederImgBase64: `data:image/jpg;base64,${buffer.toString("base64")}`,
+//           x: newLeft,
+//           y: newTop
+//         };
+//         callback(null, msg);
+//     }
+//     );
+// }
+
+// function moveCamX(call, callback) {
+//   console.log("moveCamX");
+
+//   const referenceLeft = 800;
+
+//   const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
+
+//   nxGl = newLeft;
+//   callback(null, { result: true });
+// }
+
+// function cmdStartBatch(call, callback) {
+//     if (myProductionEngine.state != 'Stopped') {
+//         return callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+//     }
+
+//     myProductionEngine.state = 'Paused';
+//     myProductionEngine.batchId = call.request.batchId;
+//     myProductionEngine.layoutName = call.request.layoutName;
+//     myProductionEngine.batchSize = call.request.batchSize;
+
+//     myProductionEngine.boardsCompleted = 0;
+//     myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
+
+//     return callback(null, { errCode: 0, errMsg: '' });
+// }
+
+// function cmdPlay(call, callback) {
+//     if (myProductionEngine.state != 'Paused') {
+//         callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+//         return;
+//     }
+
+//     myProductionEngine.state = 'Running';
+//     callback(null, { errCode: 0, errMsg: '' });
+//     return;
+// }
+
+// function cmdPause(call, callback) {
+//     if (myProductionEngine.state != 'Running') {
+//         callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+//         return;
+//     }
+
+//     myProductionEngine.state = 'Paused';
+//     callback(null, { errCode: 0, errMsg: '' });
+// }
+
+// function cmdStop(call, callback) {
+//     if (myProductionEngine.state != 'Paused') {
+//         callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+//         return;
+//     }
+
+//     myProductionEngine.state = 'Stopped';
+//     myProductionEngine.batchId = '';
+//     myProductionEngine.layoutName = '';
+//     myProductionEngine.batchSize = 0;
+//     callback(null, { errCode: 0, errMsg: '' });
+// }
+
+// function cmdNqrLoadBoard(call, callback) {
+
+//     if(waitingForBoard) {
+//         waitingForBoard = false;
+//         removeNotification(100);
+
+//         if(call.request.ok) {
+//             console.log('Board loaded')
+//         } else {
+//             console.log('Board not loaded, pause')
+//             myProductionEngine.state = 'Paused';
+//         }
+
+//     } else {
+//         console.log('unexpected CmdNqrLoadBoard')
+//         callback(null, { errCode: -1, errMsg: 'Unexpected CmdNqrLoadBoard' });
+//         return;
+//     }
+//     callback(null, { errCode: 0, errMsg: '' });
+// }
+
+
+
+// function subscribeProdEngineStatus(call, callback) {
+//     console.log('subs PE');
+//     prodEngineSubscription = call;
+//     prodEngineSubscription.write(myProductionEngine);
+// }
+
+// function subscribeMagazineStatus(call, callback) {
+//     console.log('subs mags');
+//     magSubscription = call;
+
+//     const msg = { magSlots: myMagSlots }
+//     magSubscription.write(msg);
+// }
+
+// function subscribeNotificationStatus(call, callback) {
+//     console.log('subs notif');
+//     notSubscription = call;
+
+//     const msg = { notifications: myNotifications }
+//     notSubscription.write(msg);
+// }
+
+// function subscribeCameraImages(call, callback) {
+//     console.log('subs subscribeCameraImages');
+//     cameraImagesSubscription = call;
+
+//     sendFeederImage();
+// }
 
 /////////////////////////////////////// Add / remove notifications /////////////////////////////////////////
 function addNotification(newNot) {
@@ -560,22 +640,8 @@ function main() {
     }
 
     var server = new grpc.Server();
-    server.addService(myProto.TPSysService.service, {
-        getProdEngineStatus: getProdEngineStatus,
-        getMagazineStatus: getMagazineStatus,
-        getNotificationStatus: getNotificationStatus,
-        getImageFromFeeder: getImageFromFeeder,
-        getImageFromFeederOffset: getImageFromFeederOffset,
-        cmdPlay: cmdPlay,
-        cmdStop: cmdStop,
-        cmdPause: cmdPause,
-        cmdStartBatch: cmdStartBatch,
-        cmdNqrLoadBoard: cmdNqrLoadBoard,
-        subscribeMagazineStatus: subscribeMagazineStatus,
-        subscribeProdEngineStatus: subscribeProdEngineStatus,
-        subscribeNotificationStatus: subscribeNotificationStatus,
-        subscribeCameraImages: subscribeCameraImages,
-        moveCamX: moveCamX
+    server.addService(myProto.TunnelService.service, {
+        message: handleCmd
     });
     server.bind('0.0.0.0:' + portNo, grpc.ServerCredentials.createInsecure());
     server.start();

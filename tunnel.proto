@@ -1,0 +1,27 @@
+//
+//  TpCp ...TBD
+//
+syntax = "proto3";
+
+
+package tunnel;
+
+service TunnelService {
+
+  // Status handling
+  rpc message(Request) returns (Response) {}
+
+}
+
+
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
+
+
+message Request {
+  string requestMsg = 1;
+}
+message Response {
+  string responseMsg = 1;
+}

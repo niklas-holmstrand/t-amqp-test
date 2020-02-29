@@ -193,6 +193,42 @@ message Dummy {
   int32 n = 1;
 }
 
+enum cmdMsgType {
+  CmdStartBatchType = 0;
+  CmdSwitchToTUIType = 1;
+  CmdPlayType = 2;
+  CmdPauseType = 3;
+  CmdStopType = 4;
+}
+
+message CmdMsg {
+  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+
+  oneof payload {
+    CmdStartBatch cmdStartBatch = 2;  
+    CmdSwitchToTUI cmdSwitchToTUI = 3;  
+    CmdPlay cmdPlay = 4;  
+    CmdPause cmdPause = 5;  
+    CmdStop cmdStop = 6;  
+  }
+}
+
+message RspMsg {
+  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+
+  oneof payload {
+    RspStartBatch rspStartBatch = 2;  
+    RspSwitchToTUI rspSwitchToTUI = 3;  
+    RspPlay rspPlay = 4;  
+    RspPause rspPause = 5;  
+    RspStop rspStop = 6;  
+  }
+}
+
+
+
+
+
 message CmdStartBatch {
     string batchId = 1;               // Unique id for this batch
     string layoutName = 2;            // Currently loaded layout
