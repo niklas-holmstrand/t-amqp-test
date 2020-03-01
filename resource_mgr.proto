@@ -1,0 +1,77 @@
+//
+//  TpCp ...TBD
+//
+syntax = "proto3";
+
+
+package resourceMgr;
+
+// The resource manager/owner interface
+
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
+
+enum cmdMsgType {
+  CmdSendRequest = 0;
+  CmdReserveResource = 1;
+  CmdGetStatus = 2;
+ }
+
+message CmdMsg {
+  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+  string responseQueue = 2; // Where to post response
+
+  oneof payload {
+    CmdSendRequest cmdSendRequest = 3;
+    CmdReserveResource cmdReserveResource = 4;
+    CmdGetStatus cmdGetStatus = 5;
+  }
+}
+
+message RspMsg {
+  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+
+  oneof payload {
+    RspSendRequest rspSendRequest = 3;
+    RspReserveResource rspReserveResource = 4;
+    RspGetStatus rspGetStatus = 5;
+  }
+}
+
+
+
+
+
+message CmdSendRequest {
+  string clientId = 1;               // Unique id for client.
+  bool reserveResource = 2;              // If true resource will be reserved in 10 sec after response
+  string request = 3;                // payload
+}
+
+message RspSendRequest {
+  int32 errCode = 1;
+  string errMsg = 2;
+  string response = 3;                // payload
+}
+
+message CmdReserveResource {
+      string clientId = 1;               // Unique id for client.
+  string request = 2;                // payload
+}
+
+message RspReserveResource {
+  int32 errCode;
+  string errMsg;
+  // No payload
+}
+
+message CmdGetStatus {
+}
+
+message RspGetStatus {
+  bool executingCmd;      // executing command right now
+  bool reserved;          
+  string ownerClientId;        // If reserved, by who?
+}
+
