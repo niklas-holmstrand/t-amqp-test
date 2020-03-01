@@ -1,9 +1,7 @@
-// var express = require("express");
-// var app = express();
-
 amqp = require("amqplib/callback_api");
 
-const port = 3001;
+var amqpChannel;
+const queue = 'FirstQueue';
 
 amqp.connect('amqp://localhost', (err,conn) => {
     if(err) {
@@ -11,20 +9,21 @@ amqp.connect('amqp://localhost', (err,conn) => {
     }
 
     conn.createChannel((err, ch) => {
-        var queue = 'FirstQueue';
-        var message = "Hello p8";
+        amqpChannel = ch;
 
         ch.assertQueue(queue, {durable: false});
-        ch.sendToQueue(queue, Buffer.from(message));
-        console.log('message sent');
     });
 
-    // setTimeout( () => {
-    //     conn.close();
-    //     process.exit(0); 
-    // }, 500);
-    
 });
 
-//app.listen(port, () => console.log('App listening on port', port));
+
+var i = 0;
+generateMessage = function () {
+    var message = "Hello p8 " + i++;
+    amqpChannel.sendToQueue(queue, Buffer.from(message));
+    console.log('message sent', message);
+    setTimeout( generateMessage, 200);
+}
+
+setTimeout( generateMessage, 600);
 

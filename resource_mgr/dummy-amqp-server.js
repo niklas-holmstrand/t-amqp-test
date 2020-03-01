@@ -3,24 +3,28 @@
 amqp = require("amqplib/callback_api");
 
 //const port = 3001;
+var amqpChannel;
+const queue = 'FirstQueue';
+
 
 amqp.connect('amqp://localhost', (err,conn) => {
     conn.createChannel((err, ch) => {
-        var queue = 'FirstQueue';
 
         ch.assertQueue(queue, {durable: false});
+        amqpChannel = ch;
 
-        console.log('waiting for queue', queue);
-        ch.consume(queue, (message) => {
-            console.log('Got: ', message.content.toString());
-            // console.log(`Got: ${message.content}`);
-            // console.log(message.content);
-            // msg = JSON.parse(message);
-            // console.log(msg);
-        }, {noAck: true });
-    });
-    
+
+//        while(true) {
+            console.log('waiting for queue', queue);
+            amqpChannel.consume(queue, (message) => {
+                console.log('Got: ', message.content.toString());
+                handleMessage(message.content.toString());
+            }, {noAck: true });
+//        }
+    });   
 });
 
-//app.listen(port, () => console.log('App listening on port', port));
+handleMessage = function(msg) {
+    console.log('Handle: ', msg);
+};
 
