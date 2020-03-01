@@ -13,9 +13,9 @@ package resourceMgr;
 /////////////////////////////////////////////////////////////////////
 
 enum cmdMsgType {
-  CmdSendRequest = 0;
-  CmdReserveResource = 1;
-  CmdGetStatus = 2;
+  CmdSendRequestType = 0;
+  CmdReserveResourceType = 1;
+  CmdGetStatusType = 2;
  }
 
 message CmdMsg {
@@ -61,8 +61,8 @@ message CmdReserveResource {
 }
 
 message RspReserveResource {
-  int32 errCode;
-  string errMsg;
+  int32 errCode = 1;
+  string errMsg = 2;
   // No payload
 }
 
@@ -70,8 +70,8 @@ message CmdGetStatus {
 }
 
 message RspGetStatus {
-  bool executingCmd;      // executing command right now
-  bool reserved;          
-  string ownerClientId;        // If reserved, by who?
+  bool executingCmd = 1;      // executing command right now
+  bool reserved = 2;          
+  string ownerClientId = 3;        // If reserved, by who?
 }
 
