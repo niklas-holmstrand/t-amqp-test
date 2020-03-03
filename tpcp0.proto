@@ -199,6 +199,8 @@ enum cmdMsgType {
   CmdPlayType = 2;
   CmdPauseType = 3;
   CmdStopType = 4;
+
+  CmdNoType = 99999;
 }
 
 message CmdMsg {

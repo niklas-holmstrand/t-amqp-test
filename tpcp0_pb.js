@@ -5654,7 +5654,8 @@ proto.tpcp0.cmdMsgType = {
   CMDSWITCHTOTUITYPE: 1,
   CMDPLAYTYPE: 2,
   CMDPAUSETYPE: 3,
-  CMDSTOPTYPE: 4
+  CMDSTOPTYPE: 4,
+  CMDNOTYPE: 99999
 };
 
 goog.object.extend(exports, proto.tpcp0);

@@ -28,29 +28,69 @@ amqp.connect('amqp://localhost', (err,conn) => {
 });
 
 
-handleResponse = function(msg) {
-    console.log('Handle: ', msg);
-        //
-        // Unpack resource_mgr envelop
-        //
-        const repMsg = new resMgr_schema.RspMsg();
-        console.log('got RspMsg: ', cmdMsg.getCmdtype());
-    
-//switch            
-        //
-        // Unpack resource_mgr payload and check for errors already here
-        //
-        
-        //
-        // Unpack tpcp envelop
-        //
-//switch            
-        
-        //
-        // Unpack tpcp payload and report result
-        //
+handleResponse = function(packet) {
+    console.log('Handle packet: ', packet);
+    //
+    // Unpack resource_mgr envelop
+    //
+    const r_rspMsg = resMgr_schema.RspMsg.deserializeBinary(packet);
+    r_rspMsgType = r_rspMsg.getCmdtype();
 
-    };
+    switch(r_rspMsgType) {
+        case resMgr_schema.cmdMsgType.CMDSENDREQUESTTYPE:
+
+            const r_rspSendRequest = r_rspMsg.getRspsendrequest();
+
+            r_errCode  = r_rspSendRequest.getErrcode();
+            r_errMsg  = r_rspSendRequest.getErrmsg();
+            console.log("Got resp to SendRequest, errcode/msg:", r_errCode, r_errMsg);
+
+            if (r_errCode) {
+                console.log("Resource mgr error: errcode/msg:", r_errCode, r_errMsg);
+                process.exit(0); // No TpCp response available
+            }
+
+            //
+            // A TpCp response is available. Unpack envelope
+            //
+            r_byteStr = r_rspSendRequest.getResponse();
+            r_bytes = new Uint8Array(r_byteStr.split(","));
+
+            const rspMsg = tpcp_schema.RspMsg.deserializeBinary(r_bytes);
+            rspMsgType = rspMsg.getCmdtype();
+            console.log("Got tpcp message of type:", rspMsgType);
+
+            switch(rspMsgType) {
+                case tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE:
+                    const rspStartBatch = rspMsg.getRspstartbatch();
+
+                    if(rspStartBatch.getErrcode()) {
+                        console.log("StartBatch - error, errCode/errMsg:", rspStartBatch.getErrcode(), rspStartBatch.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("StartBatch ok")
+                    break;
+
+                case tpcp_schema.cmdMsgType.CMDPAUSETYPE:
+                        const rspPause = rspMsg.getRsppause();
+    
+                        if(rspPause.getErrcode()) {
+                            console.log("Pause - error, errCode/errMsg:", rspStartBatch.getErrcode(), rspStartBatch.getErrmsg())
+                            process.exit(0);
+                        }
+                        console.log("Pause ok")
+                    break;
+    
+                default:
+                    console.log("Unknown tpcp message type received:", rspMsgType);
+
+            }
+        break;
+    }
+
+    // Command is sent and reponse handled - Done
+    process.exit(0);
+};
 
 
 ///////////////////////////////////////////////////////////////
@@ -70,6 +110,9 @@ function str2buf(str) {
 }
 
 function main() {
+    const cmdMsg = new tpcp_schema.CmdMsg();
+    cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDNOTYPE); // Set to real cmd if valid cmd-arg is found
+
     requestQueue = "Machine" + process.argv[2];
 
 
@@ -147,218 +190,21 @@ function main() {
         cmdStartBatch.setBatchsize(batchSize);
         cmdStartBatch.setBatchid(batchId);
 
-
-        //
         // Put payload in TpCp envelop
-        //
-        const cmdMsg = new tpcp_schema.CmdMsg();
         cmdMsg.setCmdstartbatch(cmdStartBatch);
         cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-  //      const bytes = cmdMsg.serializeBinary();
-  //      console.log("### cmdMsg binary " + bytes)
 
-        //
-        // Create resource_mgr payload
-        //
-        const cmdSendRequest = new resMgr_schema.CmdSendRequest();
-        cmdSendRequest.setClientid(myClientId);
-        cmdSendRequest.setReserveresource(false);
-        const cmdMsgBytes = cmdMsg.serializeBinary();
-        byteStr = cmdMsgBytes.toString()
-        cmdSendRequest.setRequest(byteStr);
-
-        //
-        // Put in resource_mgr envelop
-        //
-        const cmdMsg_rm = new resMgr_schema.CmdMsg();
-        cmdMsg_rm.setCmdtype(resMgr_schema.cmdMsgType.CMDSENDREQUEST);
-        cmdMsg_rm.setResponsequeue(myQueueName);
-        cmdMsg_rm.setCmdsendrequest(cmdSendRequest);
-        const bytes_rm = cmdMsg_rm.serializeBinary();
-
-        //
-        // Put on queue
-        //
-        packet = Buffer.from(bytes_rm)
-        amqpChannel.assertQueue(requestQueue);
-        amqpChannel.sendToQueue(requestQueue, packet);
-        console.log('message sent to', requestQueue);
-        
-
-        //
-        // tmp try recreate
-        //
-        const r_cmdMsg = resMgr_schema.CmdMsg.deserializeBinary(packet);
-        r_responseQueue = r_cmdMsg.getResponsequeue();
-        r_cmdMsgType = r_cmdMsg.getCmdtype();
-        console.log('recreate rmgr-CmdMsg: ', r_cmdMsgType, r_responseQueue);
-    
-        const r_cmdSendRequest = r_cmdMsg.getCmdsendrequest();
-
-        r_clientId  = r_cmdSendRequest.getClientid();
-        r_reserveResource  = r_cmdSendRequest.getReserveresource();
-        r_byteStr = r_cmdSendRequest.getRequest();
-
-        r_bytes = new Uint8Array(r_byteStr.split(","));
-        console.log("### r_bytes:", r_bytes);
-    
-        const rt_cmdMsg = tpcp_schema.CmdMsg.deserializeBinary(r_bytes);
-        const rt_cmdStartBatch = rt_cmdMsg.getCmdstartbatch();
-
-        console.log("rt_", rt_cmdStartBatch.toString())
-        console.log("rt_", rt_cmdStartBatch.getLayoutname())
-        console.log("rt_", rt_cmdStartBatch.getBatchsize())
-
-        ///////////////////////////////////////////////////////////////////////////////////////
-
-
-
-        // const msg = new tpcp_schema.CmdStartBatch();
-        // console.log('#####', msg);
-        // msg.setLayoutname(layoutName);
-        // msg.setBatchsize(batchSize);
-        // msg.setBatchid(batchId);
-        // const tbytes = msg.serializeBinary();
-        // console.log("binary " + tbytes)
-
-        // const recMsg = tpcp_schema.CmdStartBatch.deserializeBinary(tbytes);
-
-        // console.log(recMsg);
-        // console.log(recMsg.name)
-        // console.log(recMsg.toString())
-        // console.log(recMsg.getLayoutname())
-        // console.log(recMsg.getBatchsize())
-
-        console.log('#####2');
-
-        // //###################################################################################
-        // // pattern below
-        // //###################################################################################
-        // const cmdMsg = new tpcp_schema.CmdMsg();
-
-        // // const cmdStartBatch = new tpcp_schema.CmdStartBatch();
-        // // cmdStartBatch.setLayoutname(layoutName);
-        // // cmdStartBatch.setBatchsize(batchSize);
-        // // cmdStartBatch.setBatchid(batchId);
-        // // cmdMsg.setCmdstartbatch(cmdStartBatch);
-        // // cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-
-        // const cmdPause = new tpcp_schema.CmdPause();
-        // cmdMsg.setCmdpause(cmdPause);
-        // cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDPAUSETYPE);
-
-
-
-
-        // const tbytes = cmdMsg.serializeBinary();
-        // console.log("binary " + tbytes)
-        // const recCmdMsg = tpcp_schema.CmdMsg.deserializeBinary(tbytes);
-
-
-
-        // console.log("## recCmdMsg", recCmdMsg);
-        // console.log("##2 recCmdMsg", recCmdMsg.getCmdtype());
-
-        // switch(recCmdMsg.getCmdtype()) {
-        //     case tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE:
-        //         const reccmdStartBatch = recCmdMsg.getCmdstartbatch();
-    
-        //         console.log(reccmdStartBatch.toString())
-        //         console.log(reccmdStartBatch.getLayoutname())
-        //         console.log(reccmdStartBatch.getBatchsize())
-        //         break;
-        //     case tpcp_schema.cmdMsgType.CMDPAUSETYPE:
-        //         const reccmdPause = recCmdMsg.getCmdpause();
-
-        //         console.log("Pausing")
-        //         break;
-                    
-        // }
-        // //###################################################################################
-        // // pattern end
-        // //###################################################################################
-        // console.log('#####3');
-
-
-        // const cmdMsg = new tpcp_schema.CmdMsg();
-
-        // const cmdStartBatch = new tpcp_schema.CmdStartBatch();
-        // cmdStartBatch.setLayoutname(layoutName);
-        // cmdStartBatch.setBatchsize(batchSize);
-        // cmdStartBatch.setBatchid(batchId);
-        // cmdMsg.setCmdstartbatch(cmdStartBatch);
-        // cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-        // const bytes = cmdMsg.serializeBinary();
-        // console.log("binary " + bytes)
-
-    
-
-
-        // client.message({
-        //     requestMsg: bytes
-        // }, function (err, response) {
-        //     console.log("### response", response);
-
-        //     // temp dirty, received as string, convert back to bytes....TBD
-        //     const rbytes = str2buf(response.responseMsg);
-        //     const rspMsg = tpcp_schema.RspMsg.deserializeBinary(rbytes);
-        //     console.log("rspMsg ", rspMsg)
-        
-        
-        //     console.log("##2 rspMsg", rspMsg.getCmdtype());
-        
-        //     // Assume response is correct type
-        //     const rspStartBatch = rspMsg.getRspstartbatch();
-        //     console.log("rspStartBatch", rspStartBatch);
-        //     const errCode = rspStartBatch.getErrcode();
-        //     const errMsg = rspStartBatch.getErrmsg();
-        //     console.log("-- rec --", errCode, errMsg);
-
-        //     if (errCode != 0) {
-        //         console.log('Failed: ' + errMsg);
-        //     }
-        // });
-        return;
     }
 
     if (cmd === 'pause') {
 
         console.log('Pausing');
 
-        const cmdMsg = new tpcp_schema.CmdMsg();
         const cmdPause = new tpcp_schema.CmdPause();
+  
+        // Put payload in TpCp envelop
         cmdMsg.setCmdpause(cmdPause);
         cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDPAUSETYPE);
-        const bytes = cmdMsg.serializeBinary();
-
-
-
-        client.message({
-            requestMsg: bytes
-        }, function (err, response) {
-
-            console.log("### response", response);
-
-            // temp dirty, received as string, convert back to bytes....TBD
-            const rbytes = str2buf(response.responseMsg);
-            const rspMsg = tpcp_schema.RspMsg.deserializeBinary(rbytes);
-            console.log("rspMsg ", rspMsg)
-        
-        
-            console.log("##2 rspMsg", rspMsg.getCmdtype());
-        
-            // Assume response is correct type
-            const rspPause = rspMsg.getRsppause();
-            console.log("rspPause", rspPause);
-            const errCode = rspPause.getErrcode();
-            const errMsg = rspPause.getErrmsg();
-            console.log("-- rec --", errCode, errMsg);
-
-            if (errCode != 0) {
-                console.log('Failed: ' + errMsg);
-            }
-        });
-        return;
     }
 
 //     if (cmd === 'play') {
@@ -479,8 +325,43 @@ function main() {
 //         return;
 //     }
 
+    //
+    // If a command have been set, send it.
+    //
+    if(cmdMsg.getCmdtype()  != tpcp_schema.cmdMsgType.CMDNOTYPE ) {
+
+        //
+        // Create resource_mgr payload
+        //
+        const cmdSendRequest = new resMgr_schema.CmdSendRequest();
+        cmdSendRequest.setClientid(myClientId);
+        cmdSendRequest.setReserveresource(false);
+        cmdMsgByteStr = cmdMsg.serializeBinary().toString()     // To string since protobuff seems to only support "string payload"
+        cmdSendRequest.setRequest(cmdMsgByteStr);
+
+        //
+        // Put in resource_mgr envelop
+        //
+        const cmdMsg_rm = new resMgr_schema.CmdMsg();
+        cmdMsg_rm.setCmdtype(resMgr_schema.cmdMsgType.CMDSENDREQUEST);
+        cmdMsg_rm.setResponsequeue(myQueueName);
+        cmdMsg_rm.setCmdsendrequest(cmdSendRequest);
+        const bytes_rm = cmdMsg_rm.serializeBinary();
+
+        //
+        // Put on queue
+        //
+        packet = Buffer.from(bytes_rm)
+        amqpChannel.assertQueue(requestQueue);
+        amqpChannel.sendToQueue(requestQueue, packet);
+        console.log('message sent to', requestQueue);
+        
+        return;
+    }
+
     console.log('Unknown cmd:', cmd);
     console.log('Test "node cli_client.js 0 help" to get list of commands');
+    process.exit(-1);
 }
 
 //main();

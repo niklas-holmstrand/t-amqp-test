@@ -73,11 +73,10 @@ handleMessage = function(msg) {
 
             clientId  = cmdSendRequest.getClientid();
             reserveResource  = cmdSendRequest.getReserveresource();
-            payload = cmdSendRequest.getRequest();
-            console.log('got CmdSendRequest ', clientId, reserveResource);
+            payloadStr = cmdSendRequest.getRequest();
+    
+            console.log('got CmdSendRequest ', clientId, reserveResource, payloadStr);
 
-
-            console.log('### sending payload:', payload);
 
             //
             // Check that resource is available
@@ -88,7 +87,7 @@ handleMessage = function(msg) {
             // Send through tunnel
             //
             tunnel.message({
-                requestMsg: payload
+                requestMsg: payloadStr
             }, function (err, response) {
                 console.log("### response", response);
 
@@ -97,15 +96,16 @@ handleMessage = function(msg) {
                 //
                 const rspSendRequest = new pb_schema.RspSendRequest();
                 rspSendRequest.setErrcode(0);
-                rspSendRequest.setErrmsg("");
-                rspSendRequest.setResponse(response);
+                rspSendRequest.setErrmsg("ok");
+                rspSendRequest.setResponse(response.responseMsg);
  
                 const rspMsg = new pb_schema.RspMsg();
                 rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDSENDREQUESTTYPE);
-                rspMsg.setRspsendsequest(rspSendRequest);
+                rspMsg.setRspsendrequest(rspSendRequest);
 
                 const rbytes = rspMsg.serializeBinary();                
-                amqpChannel.sendToQueue(responseQueue, rbytes);
+                packet = Buffer.from(rbytes)
+                amqpChannel.sendToQueue(responseQueue, packet);
                 console.log('Sent rspSendRequest to ', responseQueue);
             });
             break;

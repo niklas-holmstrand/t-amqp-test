@@ -76,22 +76,12 @@ var imageFeederObj = {
 ////////////////////////////////// TpCp //////////////////////////////////////////////
 const pb_schema = require("../tpcp0_pb");
 
-function str2buf(str) {
-    var arr = str.split(","), view = new Uint8Array(arr);
-    return view.buffer
-}
-
 function handleCmd(call, callback) {
 
-    console.log(" call.request ", call);
-    tbytes = call.request.requestMsg;
-    // temp dirty, received as string, convert back to bytes....TBD
-    bytes = str2buf(tbytes);
+    bytesStr = call.request.requestMsg;
+    bytes = new Uint8Array(bytesStr.split(",")); // Convert string (protobuff payload) to something deseializable
     const recCmdMsg = pb_schema.CmdMsg.deserializeBinary(bytes);
-    console.log("recCmdMsg ", recCmdMsg)
 
-
-    console.log("##2 recCmdMsg", recCmdMsg.getCmdtype());
 
     const rspMsg = new pb_schema.RspMsg();
 
@@ -99,9 +89,9 @@ function handleCmd(call, callback) {
         case pb_schema.cmdMsgType.CMDSTARTBATCHTYPE:
             const reccmdStartBatch = recCmdMsg.getCmdstartbatch();
 
-            console.log(reccmdStartBatch.toString())
-            console.log(reccmdStartBatch.getLayoutname())
-            console.log(reccmdStartBatch.getBatchsize())
+            console.log("Layout name:", reccmdStartBatch.getLayoutname())
+            console.log("Batch size:", reccmdStartBatch.getBatchsize())
+            console.log("Batch id:", reccmdStartBatch.getBatchid())
 
             // send response
 
@@ -111,12 +101,13 @@ function handleCmd(call, callback) {
             rspStartBatch.setErrmsg("ok");
             rspMsg.setRspstartbatch(rspStartBatch);
             rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-            bytes = rspMsg.serializeBinary();
+            bytesStr = rspMsg.serializeBinary().toString();
     
-            console.log("### respond bytes", bytes)
-            return callback(null, { responseMsg: bytes });
+            console.log("### respond bytes", bytesStr)
+            return callback(null, { responseMsg: bytesStr });
 
             break;
+
         case pb_schema.cmdMsgType.CMDPAUSETYPE:
             const reccmdPause = recCmdMsg.getCmdpause();
 
@@ -129,7 +120,7 @@ function handleCmd(call, callback) {
             rspPause.setErrcode(0);
             rspPause.setErrmsg("ok");
             rspMsg.setRsppause(rspPause);
-            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPEPAUSE);
+            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPE);
             bytes = rspMsg.serializeBinary();
     
             console.log("### respond bytes", bytes)
