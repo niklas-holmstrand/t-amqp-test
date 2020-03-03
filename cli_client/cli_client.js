@@ -164,6 +164,68 @@ function main() {
         return;
     }
 
+    if (cmd === 'play') {
+        console.log('Playing...');
+
+        const cmdPlay = new tpcp_schema.CmdPlay();
+
+        const tpcpCmd = new tpcp_schema.TpcpCmd();
+        tpcpCmd.setCmdpause(cmdPlay);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PLAYTYPE);
+        const bytes = tpcpCmd.serializeBinary();
+
+        // Send and wait for response
+        client.message({
+            requestMsg: bytes
+        }, function (err, response) {
+            const rbytes = str2buf(response.responseMsg);
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(rbytes);
+        
+            // Assume response is correct type
+            const rspPlay = tpcpRsp.getRspplay();
+            const errCode = rspPlay.getErrcode();
+            const errMsg = rspPlay.getErrmsg();
+
+            if (errCode != 0) {
+                console.log('Failed: ' + errMsg);
+                return;
+            }
+            console.log('ok');
+        });
+        return;
+    }
+
+    if (cmd === 'stop') {
+        console.log('Stopping...');
+
+        const cmdStop = new tpcp_schema.CmdStop();
+
+        const tpcpCmd = new tpcp_schema.TpcpCmd();
+        tpcpCmd.setCmdstop(cmdStop);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.STOPTYPE);
+        const bytes = tpcpCmd.serializeBinary();
+
+        // Send and wait for response
+        client.message({
+            requestMsg: bytes
+        }, function (err, response) {
+            const rbytes = str2buf(response.responseMsg);
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(rbytes);
+        
+            // Assume response is correct type
+            const rspStop = tpcpRsp.getRspstop();
+            const errCode = rspStop.getErrcode();
+            const errMsg = rspStop.getErrmsg();
+
+            if (errCode != 0) {
+                console.log('Failed: ' + errMsg);
+                return;
+            }
+            console.log('ok');
+        });
+        return;
+    }
+
      if (!cmd || cmd === "getPeState") {
         const cmdGetProductionEngineStatus = new tpcp_schema.CmdGetProductionEngineStatus();
   
@@ -203,25 +265,6 @@ function main() {
         return;
      }
 
-//     if (cmd === 'play') {
-//         console.log('Starting...');
-//         client.cmdPlay({}, function (err, response) {
-//             if (response && response.errCode != 0) {
-//                 console.log('Failed: ' + response.errMsg);
-//             }
-//         });
-//         return;
-//     }
-
-//     if (cmd === 'stop') {
-//         console.log('Stopping...');
-//         client.cmdStop({}, function (err, response) {
-//             if (response && response.errCode != 0) {
-//                 console.log('Failed: ' + response.errMsg);
-//             }
-//         });
-//         return;
-//     }
 
 //     if (cmd === 'rspLoadBoard') {
 //         ok = true;

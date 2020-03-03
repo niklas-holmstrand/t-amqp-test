@@ -104,7 +104,27 @@ handleResponse = function(packet) {
                     console.log("Pause ok")
                     break;
     
-                default:
+                case tpcp_schema.TpcpMsgType.PLAYTYPE:
+                    const rspPlay = tpcpRsp.getRspplay();
+
+                    if(rspPlay.getErrcode()) {
+                        console.log("Play - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("Play ok")
+                    break;
+        
+                case tpcp_schema.TpcpMsgType.STOPTYPE:
+                    const rspStop = tpcpRsp.getRspstop();
+
+                    if(rspStop.getErrcode()) {
+                        console.log("Stop - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("Stop ok")
+                    break;
+    
+                    default:
                     console.log("Unknown tpcp message type received:", tpcpRspType);
 
             }
@@ -221,8 +241,7 @@ function main() {
     }
 
     if (cmd === 'pause') {
-
-        console.log('Pausing');
+        console.log('Pausing...');
 
         const cmdPause = new tpcp_schema.CmdPause();
   
@@ -230,25 +249,24 @@ function main() {
         tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PAUSETYPE);
     }
 
-//     if (cmd === 'play') {
-//         console.log('Starting...');
-//         client.cmdPlay({}, function (err, response) {
-//             if (response && response.errCode != 0) {
-//                 console.log('Failed: ' + response.errMsg);
-//             }
-//         });
-//         return;
-//     }
+    if (cmd === 'play') {
+        console.log('Starting...');
 
-//     if (cmd === 'stop') {
-//         console.log('Stopping...');
-//         client.cmdStop({}, function (err, response) {
-//             if (response && response.errCode != 0) {
-//                 console.log('Failed: ' + response.errMsg);
-//             }
-//         });
-//         return;
-//     }
+        const cmdPlay = new tpcp_schema.CmdPause();
+  
+        tpcpCmd.setCmdplay(cmdPlay);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PLAYTYPE);
+    }
+
+    if (cmd === 'stop') {
+        console.log('Stopping..');
+
+        const cmdStop = new tpcp_schema.CmdStop();
+  
+        tpcpCmd.setCmdstop(cmdStop);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.STOPTYPE);
+    }
+
 
 //     if (cmd === 'rspLoadBoard') {
 //         ok = true;

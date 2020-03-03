@@ -74,37 +74,53 @@ var imageFeederObj = {
 
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
-const pb_schema = require("../tpcp0_pb");
+const tpcp_schema = require("../tpcp0_pb");
 
 function handleCmd(call, callback) {
-    const tpcpRsp = new pb_schema.TpcpRsp();
+    const tpcpRsp = new tpcp_schema.TpcpRsp();
 
     // Unpack tpcp envelop
     bytesStr = call.request.requestMsg;
     bytes = new Uint8Array(bytesStr.split(",")); // Convert string (protobuff payload) to something deseializable
-    const tpcpCmd = pb_schema.TpcpCmd.deserializeBinary(bytes);
+    const tpcpCmd = tpcp_schema.TpcpCmd.deserializeBinary(bytes);
 
     console.log("Got cmd:", tpcpCmd.getMsgtype());
     tpcpRsp.setMsgtype(tpcpCmd.getMsgtype()); // Copy message type to response to not have to do it for all cases
 
     switch(tpcpCmd.getMsgtype()) {
-        case pb_schema.TpcpMsgType.STARTBATCHTYPE:
+        case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
             const cmdStartBatch = tpcpCmd.getCmdstartbatch();
             rspStartBatch = handleStartBatch(cmdStartBatch);
             tpcpRsp.setRspstartbatch(rspStartBatch);
             break;
 
-        case pb_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
+        case tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
             const cmdGetProductionEngineStatus = tpcpCmd.getCmdgetproductionenginestatus();
             rspGetProductionEngineStatus = handleGetProdEngineStatus(cmdGetProductionEngineStatus);
             tpcpRsp.setRspgetproductionenginestatus(rspGetProductionEngineStatus);
             break;
 
-        case pb_schema.TpcpMsgType.PAUSETYPE:
+        case tpcp_schema.TpcpMsgType.PAUSETYPE:
             const cmdPause = tpcpCmd.getCmdpause();
             rspPause = handlePause(cmdPause);
             tpcpRsp.setRsppause(rspPause);
             break;
+
+        case tpcp_schema.TpcpMsgType.PLAYTYPE:
+            const cmdPlay = tpcpCmd.getCmdplay();
+            rspPlay = handlePlay(cmdPlay);
+            tpcpRsp.setRspplay(rspPlay);
+            break;
+    
+        case tpcp_schema.TpcpMsgType.STOPTYPE:
+            const cmdStop = tpcpCmd.getCmdstop();
+            rspStop = handleStop(cmdStop);
+            tpcpRsp.setRspstop(rspStop);
+            break;
+
+            default:
+            console.log("Unknown cmd:", tpcpCmd.getMsgtype());
+            process.exit(-1);
     }
 
     // send response
@@ -116,7 +132,7 @@ function handleCmd(call, callback) {
 
 function handleStartBatch(cmdStartBatch) {
     // Create response
-    const rspStartBatch = new pb_schema.RspStartBatch();
+    const rspStartBatch = new tpcp_schema.RspStartBatch();
     rspStartBatch.setErrcode(-1);
     rspStartBatch.setErrmsg("NotAssigned");
 
@@ -132,9 +148,9 @@ function handleStartBatch(cmdStartBatch) {
     }
 
     myProductionEngine.state = 'Paused';
-    myProductionEngine.batchId = reccmdStartBatch.getBatchid();
-    myProductionEngine.layoutName = reccmdStartBatch.getLayoutname();
-    myProductionEngine.batchSize = reccmdStartBatch.getBatchsize();
+    myProductionEngine.batchId = cmdStartBatch.getBatchid();
+    myProductionEngine.layoutName = cmdStartBatch.getLayoutname();
+    myProductionEngine.batchSize = cmdStartBatch.getBatchsize();
 
     myProductionEngine.boardsCompleted = 0;
     myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
@@ -147,13 +163,13 @@ function handleStartBatch(cmdStartBatch) {
 
 function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
     console.log("GetProdEngineStatus")
-    const rspGetProductionEngineStatus = new pb_schema.RspGetProductionEngineStatus();
+    const rspGetProductionEngineStatus = new tpcp_schema.RspGetProductionEngineStatus();
 
     switch(myProductionEngine.state) {
-        case 'Stopped': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.STOPPED); break;
-        case 'Paused': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.PAUSED); break;
-        case 'Running': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.RUNNING); break;
-        default: rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.UNKNOWN); break;
+        case 'Stopped': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.STOPPED); break;
+        case 'Paused': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.PAUSED); break;
+        case 'Running': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.RUNNING); break;
+        default: rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.UNKNOWN); break;
     }
     rspGetProductionEngineStatus.setBatchid(myProductionEngine.batchId);
     rspGetProductionEngineStatus.setLayoutname(myProductionEngine.layoutName);
@@ -167,7 +183,7 @@ function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
 }
 
 function handlePause(cmdPause) {
-    const rspPause = new pb_schema.RspPause();
+    const rspPause = new tpcp_schema.RspPause();
     rspPause.setErrcode(-1);
     rspPause.setErrmsg("NotAssigned");
 
@@ -183,6 +199,47 @@ function handlePause(cmdPause) {
     rspPause.setErrcode(0);
     rspPause.setErrmsg("ok");
     return rspPause;
+}
+
+function handlePlay(call, callback) {
+    const rspPlay = new tpcp_schema.RspPlay();
+    rspPlay.setErrcode(-1);
+    rspPlay.setErrmsg("NotAssigned");
+
+    if (myProductionEngine.state != 'Paused') {
+        rspPlay.setErrcode(-1);
+        rspPlay.setErrmsg('Not allowed in current state');
+        return rspPlay;
+    }
+
+    console.log("Play...");
+    myProductionEngine.state = 'Running';
+
+    rspPlay.setErrcode(0);
+    rspPlay.setErrmsg("ok");
+    return rspPlay;
+}
+
+function handleStop(call, callback) {
+    const rspStop = new tpcp_schema.RspStop();
+    rspStop.setErrcode(-1);
+    rspStop.setErrmsg("NotAssigned");
+
+    if (myProductionEngine.state != 'Paused') {
+        rspStop.setErrcode(-1);
+        rspStop.setErrmsg('Not allowed in current state');
+        return rspStop;
+    }
+
+    console.log("Stop");
+    myProductionEngine.state = 'Stopped';
+    myProductionEngine.batchId = '';
+    myProductionEngine.layoutName = '';
+    myProductionEngine.batchSize = 0;
+
+    rspStop.setErrcode(0);
+    rspStop.setErrmsg("ok");
+    return rspStop;
 }
 
 
@@ -283,30 +340,6 @@ function handlePause(cmdPause) {
 //     myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
 
 //     return callback(null, { errCode: 0, errMsg: '' });
-// }
-
-// function cmdPlay(call, callback) {
-//     if (myProductionEngine.state != 'Paused') {
-//         callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-//         return;
-//     }
-
-//     myProductionEngine.state = 'Running';
-//     callback(null, { errCode: 0, errMsg: '' });
-//     return;
-// }
-
-// function cmdStop(call, callback) {
-//     if (myProductionEngine.state != 'Paused') {
-//         callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-//         return;
-//     }
-
-//     myProductionEngine.state = 'Stopped';
-//     myProductionEngine.batchId = '';
-//     myProductionEngine.layoutName = '';
-//     myProductionEngine.batchSize = 0;
-//     callback(null, { errCode: 0, errMsg: '' });
 // }
 
 // function cmdNqrLoadBoard(call, callback) {
