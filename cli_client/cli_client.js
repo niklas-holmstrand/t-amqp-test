@@ -171,15 +171,15 @@ function main() {
         console.log('#####3');
 
 
-        const cmdMsg = new pb_schema.CmdMsg();
+        const tpcpCmd = new pb_schema.TpcpCmd();
 
         const cmdStartBatch = new pb_schema.CmdStartBatch();
         cmdStartBatch.setLayoutname(layoutName);
         cmdStartBatch.setBatchsize(batchSize);
         cmdStartBatch.setBatchid(batchId);
-        cmdMsg.setCmdstartbatch(cmdStartBatch);
-        cmdMsg.setCmdtype(pb_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-        const bytes = cmdMsg.serializeBinary();
+        tpcpCmd.setCmdstartbatch(cmdStartBatch);
+        tpcpCmd.setMsgtype(pb_schema.TpcpMsgType.STARTBATCHTYPE);
+        const bytes = tpcpCmd.serializeBinary();
         console.log("binary " + bytes)
 
     
@@ -192,14 +192,14 @@ function main() {
 
             // temp dirty, received as string, convert back to bytes....TBD
             const rbytes = str2buf(response.responseMsg);
-            const rspMsg = pb_schema.RspMsg.deserializeBinary(rbytes);
-            console.log("rspMsg ", rspMsg)
+            const tpcpRsp = pb_schema.TpcpRsp.deserializeBinary(rbytes);
+            console.log("rspMsg ", tpcpRsp)
         
         
-            console.log("##2 rspMsg", rspMsg.getCmdtype());
+            console.log("##2 tpcpRsp", tpcpRsp.getMsgtype());
         
             // Assume response is correct type
-            const rspStartBatch = rspMsg.getRspstartbatch();
+            const rspStartBatch = tpcpRsp.getRspstartbatch();
             console.log("rspStartBatch", rspStartBatch);
             const errCode = rspStartBatch.getErrcode();
             const errMsg = rspStartBatch.getErrmsg();
@@ -216,11 +216,11 @@ function main() {
 
         console.log('Pausing');
 
-        const cmdMsg = new pb_schema.CmdMsg();
+        const tpcpCmd = new pb_schema.TpcpCmd();
         const cmdPause = new pb_schema.CmdPause();
-        cmdMsg.setCmdpause(cmdPause);
-        cmdMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPE);
-        const bytes = cmdMsg.serializeBinary();
+        tpcpCmd.setCmdpause(cmdPause);
+        tpcpCmd.setMsgtype(pb_schema.TpcpMsgType.PAUSETYPE);
+        const bytes = tpcpCmd.serializeBinary();
 
 
 
@@ -232,14 +232,14 @@ function main() {
 
             // temp dirty, received as string, convert back to bytes....TBD
             const rbytes = str2buf(response.responseMsg);
-            const rspMsg = pb_schema.RspMsg.deserializeBinary(rbytes);
-            console.log("rspMsg ", rspMsg)
+            const tpcpRsp = pb_schema.TpcpRsp.deserializeBinary(rbytes);
+            console.log("rspMsg ", tpcpRsp)
         
         
-            console.log("##2 rspMsg", rspMsg.getCmdtype());
+            console.log("##2 tpcpRsp", tpcpRsp.getMsgtype());
         
             // Assume response is correct type
-            const rspPause = rspMsg.getRsppause();
+            const rspPause = tpcpRsp.getRsppause();
             console.log("rspPause", rspPause);
             const errCode = rspPause.getErrcode();
             const errMsg = rspPause.getErrmsg();

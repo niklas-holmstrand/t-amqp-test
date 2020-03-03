@@ -33,36 +33,36 @@ handleResponse = function(packet) {
     //
     // Unpack resource_mgr envelop
     //
-    const r_rspMsg = resMgr_schema.RspMsg.deserializeBinary(packet);
-    r_rspMsgType = r_rspMsg.getCmdtype();
+    const resmgrRsp = resMgr_schema.ResmgrRsp.deserializeBinary(packet);
+    resmgrMsgType = resmgrRsp.getMsgtype();
 
-    switch(r_rspMsgType) {
-        case resMgr_schema.cmdMsgType.CMDSENDREQUESTTYPE:
+    switch(resmgrMsgType) {
+        case resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE:
 
-            const r_rspSendRequest = r_rspMsg.getRspsendrequest();
+            const rspSendRequest = resmgrRsp.getRspsendrequest();
 
-            r_errCode  = r_rspSendRequest.getErrcode();
-            r_errMsg  = r_rspSendRequest.getErrmsg();
-            console.log("Got resp to SendRequest, errcode/msg:", r_errCode, r_errMsg);
+            errCode  = rspSendRequest.getErrcode();
+            errMsg  = rspSendRequest.getErrmsg();
+            console.log("Got resp to SendRequest, errcode/msg:", errCode, errMsg);
 
-            if (r_errCode) {
-                console.log("Resource mgr error: errcode/msg:", r_errCode, r_errMsg);
+            if (errCode) {
+                console.log("Resource mgr error: errcode/msg:", errCode, errMsg);
                 process.exit(0); // No TpCp response available
             }
 
             //
             // A TpCp response is available. Unpack envelope
             //
-            r_byteStr = r_rspSendRequest.getResponse();
+            r_byteStr = rspSendRequest.getResponse();
             r_bytes = new Uint8Array(r_byteStr.split(","));
 
-            const rspMsg = tpcp_schema.RspMsg.deserializeBinary(r_bytes);
-            rspMsgType = rspMsg.getCmdtype();
-            console.log("Got tpcp message of type:", rspMsgType);
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(r_bytes);
+            tpcpRspType = tpcpRsp.getMsgtype();
+            console.log("Got tpcp message of type:", tpcpRspType);
 
-            switch(rspMsgType) {
-                case tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE:
-                    const rspStartBatch = rspMsg.getRspstartbatch();
+            switch(tpcpRspType) {
+                case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
+                    const rspStartBatch = tpcpRsp.getRspstartbatch();
 
                     if(rspStartBatch.getErrcode()) {
                         console.log("StartBatch - error, errCode/errMsg:", rspStartBatch.getErrcode(), rspStartBatch.getErrmsg())
@@ -71,8 +71,8 @@ handleResponse = function(packet) {
                     console.log("StartBatch ok")
                     break;
 
-                case tpcp_schema.cmdMsgType.CMDPAUSETYPE:
-                        const rspPause = rspMsg.getRsppause();
+                case tpcp_schema.TpcpMsgType.PAUSETYPE:
+                        const rspPause = tpcpRsp.getRsppause();
     
                         if(rspPause.getErrcode()) {
                             console.log("Pause - error, errCode/errMsg:", rspStartBatch.getErrcode(), rspStartBatch.getErrmsg())
@@ -82,7 +82,7 @@ handleResponse = function(packet) {
                     break;
     
                 default:
-                    console.log("Unknown tpcp message type received:", rspMsgType);
+                    console.log("Unknown tpcp message type received:", tpcpRspType);
 
             }
         break;
@@ -110,8 +110,8 @@ function str2buf(str) {
 }
 
 function main() {
-    const cmdMsg = new tpcp_schema.CmdMsg();
-    cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDNOTYPE); // Set to real cmd if valid cmd-arg is found
+    const tpcpCmd = new tpcp_schema.TpcpCmd();
+    tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.NOTYPE); // Set to real cmd if valid cmd-arg is found
 
     requestQueue = "Machine" + process.argv[2];
 
@@ -191,8 +191,8 @@ function main() {
         cmdStartBatch.setBatchid(batchId);
 
         // Put payload in TpCp envelop
-        cmdMsg.setCmdstartbatch(cmdStartBatch);
-        cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDSTARTBATCHTYPE);
+        tpcpCmd.setCmdstartbatch(cmdStartBatch);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.STARTBATCHTYPE);
 
     }
 
@@ -203,8 +203,8 @@ function main() {
         const cmdPause = new tpcp_schema.CmdPause();
   
         // Put payload in TpCp envelop
-        cmdMsg.setCmdpause(cmdPause);
-        cmdMsg.setCmdtype(tpcp_schema.cmdMsgType.CMDPAUSETYPE);
+        tpcpCmd.setCmdpause(cmdPause);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PAUSETYPE);
     }
 
 //     if (cmd === 'play') {
@@ -328,7 +328,7 @@ function main() {
     //
     // If a command have been set, send it.
     //
-    if(cmdMsg.getCmdtype()  != tpcp_schema.cmdMsgType.CMDNOTYPE ) {
+    if(tpcpCmd.getMsgtype()  != tpcp_schema.TpcpMsgType.NOTYPE ) {
 
         //
         // Create resource_mgr payload
@@ -336,22 +336,22 @@ function main() {
         const cmdSendRequest = new resMgr_schema.CmdSendRequest();
         cmdSendRequest.setClientid(myClientId);
         cmdSendRequest.setReserveresource(false);
-        cmdMsgByteStr = cmdMsg.serializeBinary().toString()     // To string since protobuff seems to only support "string payload"
-        cmdSendRequest.setRequest(cmdMsgByteStr);
+        tpcpCmdByteStr = tpcpCmd.serializeBinary().toString()     // To string since protobuff seems to only support "string payload"
+        cmdSendRequest.setRequest(tpcpCmdByteStr);
 
         //
         // Put in resource_mgr envelop
         //
-        const cmdMsg_rm = new resMgr_schema.CmdMsg();
-        cmdMsg_rm.setCmdtype(resMgr_schema.cmdMsgType.CMDSENDREQUEST);
-        cmdMsg_rm.setResponsequeue(myQueueName);
-        cmdMsg_rm.setCmdsendrequest(cmdSendRequest);
-        const bytes_rm = cmdMsg_rm.serializeBinary();
+        const resmgrCmd = new resMgr_schema.ResmgrCmd();
+        resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUEST);
+        resmgrCmd.setResponsequeue(myQueueName);
+        resmgrCmd.setCmdsendrequest(cmdSendRequest);
 
         //
-        // Put on queue
+        // Put on message queue
         //
-        packet = Buffer.from(bytes_rm)
+        const bytes = resmgrCmd.serializeBinary();
+        packet = Buffer.from(bytes)
         amqpChannel.assertQueue(requestQueue);
         amqpChannel.sendToQueue(requestQueue, packet);
         console.log('message sent to', requestQueue);

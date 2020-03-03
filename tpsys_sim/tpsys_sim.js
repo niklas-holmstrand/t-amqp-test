@@ -80,14 +80,14 @@ function handleCmd(call, callback) {
 
     bytesStr = call.request.requestMsg;
     bytes = new Uint8Array(bytesStr.split(",")); // Convert string (protobuff payload) to something deseializable
-    const recCmdMsg = pb_schema.CmdMsg.deserializeBinary(bytes);
+    const tpcpCmd = pb_schema.TpcpCmd.deserializeBinary(bytes);
 
 
-    const rspMsg = new pb_schema.RspMsg();
+    const tpcpRsp = new pb_schema.TpcpRsp();
 
-    switch(recCmdMsg.getCmdtype()) {
-        case pb_schema.cmdMsgType.CMDSTARTBATCHTYPE:
-            const reccmdStartBatch = recCmdMsg.getCmdstartbatch();
+    switch(tpcpCmd.getMsgtype()) {
+        case pb_schema.TpcpMsgType.STARTBATCHTYPE:
+            const reccmdStartBatch = tpcpCmd.getCmdstartbatch();
 
             console.log("Layout name:", reccmdStartBatch.getLayoutname())
             console.log("Batch size:", reccmdStartBatch.getBatchsize())
@@ -99,17 +99,17 @@ function handleCmd(call, callback) {
             const rspStartBatch = new pb_schema.RspStartBatch();
             rspStartBatch.setErrcode(0);
             rspStartBatch.setErrmsg("ok");
-            rspMsg.setRspstartbatch(rspStartBatch);
-            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-            bytesStr = rspMsg.serializeBinary().toString();
+            tpcpRsp.setRspstartbatch(rspStartBatch);
+            tpcpRsp.setMsgtype(pb_schema.TpcpMsgType.STARTBATCHTYPE);
+            bytesStr = tpcpRsp.serializeBinary().toString();
     
             console.log("### respond bytes", bytesStr)
             return callback(null, { responseMsg: bytesStr });
 
             break;
 
-        case pb_schema.cmdMsgType.CMDPAUSETYPE:
-            const reccmdPause = recCmdMsg.getCmdpause();
+        case pb_schema.TpcpMsgType.PAUSETYPE:
+            const reccmdPause = tpcpCmd.getCmdpause();
 
             console.log("Pausing")
 
@@ -119,9 +119,9 @@ function handleCmd(call, callback) {
             const rspPause = new pb_schema.RspPause();
             rspPause.setErrcode(0);
             rspPause.setErrmsg("ok");
-            rspMsg.setRsppause(rspPause);
-            rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPE);
-            bytes = rspMsg.serializeBinary();
+            tpcpRsp.setRsppause(rspPause);
+            tpcpRsp.setMsgtype(pb_schema.TpcpMsgType.PAUSETYPE);
+            bytes = tpcpRsp.serializeBinary();
     
             console.log("### respond bytes", bytes)
             return callback(null, { responseMsg: bytes });

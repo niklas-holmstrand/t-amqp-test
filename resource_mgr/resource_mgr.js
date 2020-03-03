@@ -59,17 +59,17 @@ const pb_schema = require("../resource_mgr_pb");
 handleMessage = function(msg) {
     console.log('Handle: ', msg);
 
-    const cmdMsg = pb_schema.CmdMsg.deserializeBinary(msg);
-    responseQueue = cmdMsg.getResponsequeue();
-    cmdMsgType = cmdMsg.getCmdtype();
-    console.log('got CmdMsg: ', cmdMsgType, responseQueue);
+    const resmgrCmd = pb_schema.ResmgrCmd.deserializeBinary(msg);
+    responseQueue = resmgrCmd.getResponsequeue();
+    resmgrCmdType = resmgrCmd.getMsgtype();
+    console.log('got ResmgrCmd: ', resmgrCmdType, responseQueue);
 
     amqpChannel.assertQueue(responseQueue);
 
 
-    switch(cmdMsgType) {
-        case pb_schema.cmdMsgType.CMDSENDREQUESTTYPE:
-            const cmdSendRequest = cmdMsg.getCmdsendrequest();
+    switch(resmgrCmdType) {
+        case pb_schema.ResmgrMsgType.SENDREQUESTTYPE:
+            const cmdSendRequest = resmgrCmd.getCmdsendrequest();
 
             clientId  = cmdSendRequest.getClientid();
             reserveResource  = cmdSendRequest.getReserveresource();
@@ -99,20 +99,20 @@ handleMessage = function(msg) {
                 rspSendRequest.setErrmsg("ok");
                 rspSendRequest.setResponse(response.responseMsg);
  
-                const rspMsg = new pb_schema.RspMsg();
-                rspMsg.setCmdtype(pb_schema.cmdMsgType.CMDSENDREQUESTTYPE);
-                rspMsg.setRspsendrequest(rspSendRequest);
+                const resmgrRsp = new pb_schema.ResmgrRsp();
+                resmgrRsp.setMsgtype(pb_schema.ResmgrMsgType.SENDREQUESTTYPE);
+                resmgrRsp.setRspsendrequest(rspSendRequest);
 
-                const rbytes = rspMsg.serializeBinary();                
-                packet = Buffer.from(rbytes)
+                const bytes = resmgrRsp.serializeBinary();                
+                packet = Buffer.from(bytes)
                 amqpChannel.sendToQueue(responseQueue, packet);
                 console.log('Sent rspSendRequest to ', responseQueue);
             });
             break;
 
-        case pb_schema.cmdMsgType.CMDRESERVERESOURCETYPE:
+        case pb_schema.ResmgrMsgType.RESERVERESOURCETYPE:
             console.log('### 1 ');
-            const cmdReserveResource = cmdMsg.getCmdreserveresource();
+            const cmdReserveResource = resmgrCmd.getCmdreserveresource();
 
             clientId  = cmdReserveResource.getClientid();
             console.log('got CmdReserveResource ', clientId);

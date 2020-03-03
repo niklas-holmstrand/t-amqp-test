@@ -9,17 +9,17 @@ package resourceMgr;
 // The resource manager/owner interface
 
 /////////////////////////////////////////////////////////////////////
-// Commands & responses
+// Resource manager envelop
 /////////////////////////////////////////////////////////////////////
 
-enum cmdMsgType {
-  CmdSendRequestType = 0;
-  CmdReserveResourceType = 1;
-  CmdGetStatusType = 2;
+enum ResmgrMsgType {
+  SendRequestType = 0;
+  ReserveResourceType = 1;
+  GetStatusType = 2;
  }
 
-message CmdMsg {
-  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+message ResmgrCmd {
+  ResmgrMsgType msgType = 1; // stupid, should not be necessary!
   string responseQueue = 2; // Where to post response
 
   oneof payload {
@@ -29,8 +29,8 @@ message CmdMsg {
   }
 }
 
-message RspMsg {
-  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+message ResmgrRsp {
+  ResmgrMsgType msgType = 1; // stupid, should not be necessary!
 
   oneof payload {
     RspSendRequest rspSendRequest = 3;
@@ -40,6 +40,9 @@ message RspMsg {
 }
 
 
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
 
 
 

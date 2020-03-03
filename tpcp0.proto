@@ -7,33 +7,33 @@ syntax = "proto3";
 package tpcp0;
 
 // The TPSys service definition.
-service TPSysService {
+// service TPSysService {
 
-  // Status handling
-  rpc getProdEngineStatus(Dummy) returns (ProductionEngineStatus) {}
-  rpc getMagazineStatus(Dummy) returns (MagazineStatus) {}
-  rpc getNotificationStatus(Dummy) returns (NotificationStatus) {}
-  rpc getImageFromFeeder(Dummy) returns (FeederImageRsp) {}
-  rpc getImageFromFeederOffset(FeederImageReq) returns (FeederImageRsp) {}
-  rpc moveCamX(MoveCamXReq) returns (MoveCamXRsp) {}
+//   // Status handling
+//   rpc getProdEngineStatus(Dummy) returns (ProductionEngineStatus) {}
+//   rpc getMagazineStatus(Dummy) returns (MagazineStatus) {}
+//   rpc getNotificationStatus(Dummy) returns (NotificationStatus) {}
+//   rpc getImageFromFeeder(Dummy) returns (FeederImageRsp) {}
+//   rpc getImageFromFeederOffset(FeederImageReq) returns (FeederImageRsp) {}
+//   rpc moveCamX(MoveCamXReq) returns (MoveCamXRsp) {}
 
-  rpc subscribeProdEngineStatus(Dummy) returns (stream ProductionEngineStatus) {}
-  rpc subscribeMagazineStatus(Dummy) returns (stream MagazineStatus) {}
-  rpc subscribeNotificationStatus(Dummy) returns (stream NotificationStatus) {}
-  rpc subscribeCameraImages(Dummy) returns (stream FeederImageRsp) {}
+//   rpc subscribeProdEngineStatus(Dummy) returns (stream ProductionEngineStatus) {}
+//   rpc subscribeMagazineStatus(Dummy) returns (stream MagazineStatus) {}
+//   rpc subscribeNotificationStatus(Dummy) returns (stream NotificationStatus) {}
+//   rpc subscribeCameraImages(Dummy) returns (stream FeederImageRsp) {}
 
-  // Cmd/Rsp
-  rpc cmdSwitchToTUI(CmdSwitchToTUI) returns (RspSwitchToTUI) {}
-  rpc cmdPlay(CmdPlay) returns (RspPlay) {}
-  rpc cmdPause(CmdPause) returns (RspPause) {}
-  rpc cmdStop(CmdStop) returns (RspStop) {}
-  rpc cmdStartBatch(CmdStartBatch) returns (RspStartBatch) {}
+//   // Cmd/Rsp
+//   rpc cmdSwitchToTUI(CmdSwitchToTUI) returns (RspSwitchToTUI) {}
+//   rpc cmdPlay(CmdPlay) returns (RspPlay) {}
+//   rpc cmdPause(CmdPause) returns (RspPause) {}
+//   rpc cmdStop(CmdStop) returns (RspStop) {}
+//   rpc cmdStartBatch(CmdStartBatch) returns (RspStartBatch) {}
 
-  // Notification Query Responses
-  rpc cmdNqrLoadBoard(CmdNqrLoadBoard) returns (RspNqrLoadBoard) {}
-  rpc cmdNqrRemoveBoard(CmdNqrRemoveBoard) returns (RspNqrRemoveBoard) {}
-  rpc cmdNqrUnloadAnyLoadedBoard(CmdNqrUnloadAnyLoadedBoard) returns (RspNqrUnloadAnyLoadedBoard) {}
-}
+//   // Notification Query Responses
+//   rpc cmdNqrLoadBoard(CmdNqrLoadBoard) returns (RspNqrLoadBoard) {}
+//   rpc cmdNqrRemoveBoard(CmdNqrRemoveBoard) returns (RspNqrRemoveBoard) {}
+//   rpc cmdNqrUnloadAnyLoadedBoard(CmdNqrUnloadAnyLoadedBoard) returns (RspNqrUnloadAnyLoadedBoard) {}
+// }
 
 /////////////////////////////////////////////////////////////////////
 // ProductionEngine status
@@ -185,26 +185,27 @@ enum NotificationSeverity {
                               // disappears spontaneously when the status ends.
 }
 
-/////////////////////////////////////////////////////////////////////
-// Commands & responses
-/////////////////////////////////////////////////////////////////////
 
 message Dummy {
   int32 n = 1;
 }
 
-enum cmdMsgType {
-  CmdStartBatchType = 0;
-  CmdSwitchToTUIType = 1;
-  CmdPlayType = 2;
-  CmdPauseType = 3;
-  CmdStopType = 4;
+/////////////////////////////////////////////////////////////////////
+// TpCp envelop
+/////////////////////////////////////////////////////////////////////
 
-  CmdNoType = 99999;
+enum TpcpMsgType {
+  StartBatchType = 0;
+  SwitchToTUIType = 1;
+  PlayType = 2;
+  PauseType = 3;
+  StopType = 4;
+
+  NoType = 99999;
 }
 
-message CmdMsg {
-  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+message TpcpCmd {
+  TpcpMsgType msgType = 1; 
 
   oneof payload {
     CmdStartBatch cmdStartBatch = 2;  
@@ -215,8 +216,8 @@ message CmdMsg {
   }
 }
 
-message RspMsg {
-  cmdMsgType cmdType = 1; // stupid, should not be necessary!
+message TpcpRsp {
+  TpcpMsgType msgType = 1; 
 
   oneof payload {
     RspStartBatch rspStartBatch = 2;  
@@ -229,6 +230,9 @@ message RspMsg {
 
 
 
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
 
 
 message CmdStartBatch {
