@@ -75,7 +75,7 @@ handleResponse = function(packet) {
                         const rspPause = tpcpRsp.getRsppause();
     
                         if(rspPause.getErrcode()) {
-                            console.log("Pause - error, errCode/errMsg:", rspStartBatch.getErrcode(), rspStartBatch.getErrmsg())
+                            console.log("Pause - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
                             process.exit(0);
                         }
                         console.log("Pause ok")
