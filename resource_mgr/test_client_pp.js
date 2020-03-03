@@ -18,7 +18,7 @@ amqp.connect('amqp://localhost', (err,conn) => {
 
         // Setup consumer
         amqpChannel.consume(myQueueName, (message) => {
-            console.log('Got amqp pck');
+            // console.log('Got amqp pck');
             handleResponse(message.content);
         }, {noAck: true });
 
@@ -29,7 +29,8 @@ amqp.connect('amqp://localhost', (err,conn) => {
 
 
 handleResponse = function(packet) {
-    console.log('Handle packet: ', packet);
+    //console.log('Handle packet: ', packet);
+
     //
     // Unpack resource_mgr envelop
     //
@@ -43,7 +44,7 @@ handleResponse = function(packet) {
 
             errCode  = rspSendRequest.getErrcode();
             errMsg  = rspSendRequest.getErrmsg();
-            console.log("Got resp to SendRequest, errcode/msg:", errCode, errMsg);
+            //console.log("Got resp to SendRequest, errcode/msg:", errCode, errMsg);
 
             if (errCode) {
                 console.log("Resource mgr error: errcode/msg:", errCode, errMsg);
@@ -71,14 +72,36 @@ handleResponse = function(packet) {
                     console.log("StartBatch ok")
                     break;
 
-                case tpcp_schema.TpcpMsgType.PAUSETYPE:
-                        const rspPause = tpcpRsp.getRsppause();
+                case tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
+                    const rspGetProductionEngineStatus = tpcpRsp.getRspgetproductionenginestatus();
+
+                    switch(rspGetProductionEngineStatus.getState()) {
+                        case tpcp_schema.ProductionEngineState.STOPPED: state = 'Stopped'; break;
+                        case tpcp_schema.ProductionEngineState.PAUSED: state = 'Paused'; break;
+                        case tpcp_schema.ProductionEngineState.RUNNING: state = 'Running'; break;
+                        default: state = 'Unknown: ' + rspGetProductionEngineStatus.getState(); break;
+                    }
+
+                    console.log("ProductionEngineStatus");
+                    console.log("State:", state);
+                    console.log("BatchId:", rspGetProductionEngineStatus.getBatchid());
+                    console.log("LayoutName:", rspGetProductionEngineStatus.getLayoutname());
+                    console.log("BatchSize:", rspGetProductionEngineStatus.getBatchsize());
+                    console.log("BoardsCompleted:", rspGetProductionEngineStatus.getBoardscompleted());
+                    console.log("ComponentsPerBoard:", rspGetProductionEngineStatus.getComponentsperboard());
+                    console.log("ComponentsLeft:", rspGetProductionEngineStatus.getComponentsleft());
+                    console.log("ComponentsMissing:", rspGetProductionEngineStatus.getComponentsmissing());
+                      
+                    break;
     
-                        if(rspPause.getErrcode()) {
-                            console.log("Pause - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
-                            process.exit(0);
-                        }
-                        console.log("Pause ok")
+                case tpcp_schema.TpcpMsgType.PAUSETYPE:
+                    const rspPause = tpcpRsp.getRsppause();
+
+                    if(rspPause.getErrcode()) {
+                        console.log("Pause - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("Pause ok")
                     break;
     
                 default:
@@ -181,19 +204,20 @@ function main() {
 
         console.log('PB-Start batch...');
 
-        ///////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Create TpCp payload
-        //
         const cmdStartBatch = new tpcp_schema.CmdStartBatch();
         cmdStartBatch.setLayoutname(layoutName);
         cmdStartBatch.setBatchsize(batchSize);
         cmdStartBatch.setBatchid(batchId);
 
-        // Put payload in TpCp envelop
         tpcpCmd.setCmdstartbatch(cmdStartBatch);
         tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.STARTBATCHTYPE);
+    }
 
+    if (!cmd || cmd === "getPeState") {
+        const cmdGetProductionEngineStatus = new tpcp_schema.CmdGetProductionEngineStatus();
+  
+        tpcpCmd.setCmdgetproductionenginestatus(cmdGetProductionEngineStatus);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE);
     }
 
     if (cmd === 'pause') {
@@ -202,7 +226,6 @@ function main() {
 
         const cmdPause = new tpcp_schema.CmdPause();
   
-        // Put payload in TpCp envelop
         tpcpCmd.setCmdpause(cmdPause);
         tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PAUSETYPE);
     }
@@ -293,14 +316,6 @@ function main() {
 //         return;
 //     }
 
-//     if (!cmd || cmd === "getPeState") {
-//         client.getProdEngineStatus({}, function (err, response) {
-//             console.log('ProductionEngineStatus:');
-//             console.log('State:', response);
-//         });
-//         return;
-//     }
-
 //     if (cmd === 'subsPe') {
 //         console.log('Subscribing production engine');
 
@@ -354,7 +369,7 @@ function main() {
         packet = Buffer.from(bytes)
         amqpChannel.assertQueue(requestQueue);
         amqpChannel.sendToQueue(requestQueue, packet);
-        console.log('message sent to', requestQueue);
+        //console.log('message sent to', requestQueue);
         
         return;
     }

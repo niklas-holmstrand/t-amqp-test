@@ -91,6 +91,11 @@ handleMessage = function(msg) {
             }, function (err, response) {
                 console.log("### response", response);
 
+                if(!response) {
+                    console.log("Receied empty response! Ignoring");
+                    return;
+                }
+
                 //
                 // Repack response from server to client
                 //

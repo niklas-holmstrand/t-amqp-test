@@ -85,32 +85,31 @@ function handleCmd(call, callback) {
     const tpcpCmd = pb_schema.TpcpCmd.deserializeBinary(bytes);
 
     console.log("Got cmd:", tpcpCmd.getMsgtype());
+    tpcpRsp.setMsgtype(tpcpCmd.getMsgtype()); // Copy message type to response to not have to do it for all cases
 
     switch(tpcpCmd.getMsgtype()) {
         case pb_schema.TpcpMsgType.STARTBATCHTYPE:
             const cmdStartBatch = tpcpCmd.getCmdstartbatch();
-
             rspStartBatch = handleStartBatch(cmdStartBatch);
-console.log("###A###", rspStartBatch);
             tpcpRsp.setRspstartbatch(rspStartBatch);
-            tpcpRsp.setMsgtype(pb_schema.TpcpMsgType.STARTBATCHTYPE);
+            break;
+
+        case pb_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
+            const cmdGetProductionEngineStatus = tpcpCmd.getCmdgetproductionenginestatus();
+            rspGetProductionEngineStatus = handleGetProdEngineStatus(cmdGetProductionEngineStatus);
+            tpcpRsp.setRspgetproductionenginestatus(rspGetProductionEngineStatus);
             break;
 
         case pb_schema.TpcpMsgType.PAUSETYPE:
             const cmdPause = tpcpCmd.getCmdpause();
-
             rspPause = handlePause(cmdPause);
- console.log("###P###", rspPause);
-
             tpcpRsp.setRsppause(rspPause);
-            tpcpRsp.setMsgtype(pb_schema.TpcpMsgType.PAUSETYPE);
             break;
     }
 
-
     // send response
+    console.log("Sending rsp:", tpcpRsp.getMsgtype());
     bytesStr = tpcpRsp.serializeBinary().toString();
-    console.log("###B###", bytesStr);
     return callback(null, { responseMsg: bytesStr });
 }
 
@@ -146,6 +145,27 @@ function handleStartBatch(cmdStartBatch) {
 }
 
 
+function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
+    console.log("GetProdEngineStatus")
+    const rspGetProductionEngineStatus = new pb_schema.RspGetProductionEngineStatus();
+
+    switch(myProductionEngine.state) {
+        case 'Stopped': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.STOPPED); break;
+        case 'Paused': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.PAUSED); break;
+        case 'Running': rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.RUNNING); break;
+        default: rspGetProductionEngineStatus.setState(pb_schema.ProductionEngineState.UNKNOWN); break;
+    }
+    rspGetProductionEngineStatus.setBatchid(myProductionEngine.batchId);
+    rspGetProductionEngineStatus.setLayoutname(myProductionEngine.layoutName);
+    rspGetProductionEngineStatus.setBatchsize(myProductionEngine.batchSize);
+    rspGetProductionEngineStatus.setBoardscompleted(myProductionEngine.boardsCompleted);
+    rspGetProductionEngineStatus.setComponentsperboard(myProductionEngine.componentsPerBoard);
+    rspGetProductionEngineStatus.setComponentsleft(myProductionEngine.componentsLeft);
+    rspGetProductionEngineStatus.setComponentsmissing(myProductionEngine.componentsMissing);
+  
+    return rspGetProductionEngineStatus;
+}
+
 function handlePause(cmdPause) {
     const rspPause = new pb_schema.RspPause();
     rspPause.setErrcode(-1);
@@ -165,11 +185,6 @@ function handlePause(cmdPause) {
     return rspPause;
 }
 
-
-// function getProdEngineStatus(call, callback) {
-//     console.log("GetProdEngineStatus")
-//     callback(null, myProductionEngine);
-// }
 
 // function getMagazineStatus(call, callback) {
 //     console.log("GetMagazineStatus")

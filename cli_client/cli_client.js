@@ -2,7 +2,7 @@
  * test the tpsys_server
  * 
  */
-const pb_schema = require("../tpcp0_pb");
+const tpcp_schema = require("../tpcp0_pb");
 
 
 //var PROTO_PATH = __dirname + '../tpcp0.proto';
@@ -86,7 +86,6 @@ function main() {
     // }
 
     if (cmd === 'defineBatch') {
-        
         layoutName = 'TheClientLayout';
         batchSize = 75;
         batchId = '982-33-BC';
@@ -102,155 +101,107 @@ function main() {
         }
         console.log('Define batch LayoutName: ' + layoutName + ' BatchSize: ' + batchSize + ' BatchId: ' + batchId)
 
-        console.log('PB-Start batch...');
 
-        // const msg = new pb_schema.CmdStartBatch();
-        // console.log('#####', msg);
-        // msg.setLayoutname(layoutName);
-        // msg.setBatchsize(batchSize);
-        // msg.setBatchid(batchId);
-        // const tbytes = msg.serializeBinary();
-        // console.log("binary " + tbytes)
-
-        // const recMsg = pb_schema.CmdStartBatch.deserializeBinary(tbytes);
-
-        // console.log(recMsg);
-        // console.log(recMsg.name)
-        // console.log(recMsg.toString())
-        // console.log(recMsg.getLayoutname())
-        // console.log(recMsg.getBatchsize())
-
-        console.log('#####2');
-
-        // //###################################################################################
-        // // pattern below
-        // //###################################################################################
-        // const cmdMsg = new pb_schema.CmdMsg();
-
-        // // const cmdStartBatch = new pb_schema.CmdStartBatch();
-        // // cmdStartBatch.setLayoutname(layoutName);
-        // // cmdStartBatch.setBatchsize(batchSize);
-        // // cmdStartBatch.setBatchid(batchId);
-        // // cmdMsg.setCmdstartbatch(cmdStartBatch);
-        // // cmdMsg.setCmdtype(pb_schema.cmdMsgType.CMDSTARTBATCHTYPE);
-
-        // const cmdPause = new pb_schema.CmdPause();
-        // cmdMsg.setCmdpause(cmdPause);
-        // cmdMsg.setCmdtype(pb_schema.cmdMsgType.CMDPAUSETYPE);
-
-
-
-
-        // const tbytes = cmdMsg.serializeBinary();
-        // console.log("binary " + tbytes)
-        // const recCmdMsg = pb_schema.CmdMsg.deserializeBinary(tbytes);
-
-
-
-        // console.log("## recCmdMsg", recCmdMsg);
-        // console.log("##2 recCmdMsg", recCmdMsg.getCmdtype());
-
-        // switch(recCmdMsg.getCmdtype()) {
-        //     case pb_schema.cmdMsgType.CMDSTARTBATCHTYPE:
-        //         const reccmdStartBatch = recCmdMsg.getCmdstartbatch();
-    
-        //         console.log(reccmdStartBatch.toString())
-        //         console.log(reccmdStartBatch.getLayoutname())
-        //         console.log(reccmdStartBatch.getBatchsize())
-        //         break;
-        //     case pb_schema.cmdMsgType.CMDPAUSETYPE:
-        //         const reccmdPause = recCmdMsg.getCmdpause();
-
-        //         console.log("Pausing")
-        //         break;
-                    
-        // }
-        // //###################################################################################
-        // // pattern end
-        // //###################################################################################
-        console.log('#####3');
-
-
-        const tpcpCmd = new pb_schema.TpcpCmd();
-
-        const cmdStartBatch = new pb_schema.CmdStartBatch();
+        const cmdStartBatch = new tpcp_schema.CmdStartBatch();
         cmdStartBatch.setLayoutname(layoutName);
         cmdStartBatch.setBatchsize(batchSize);
         cmdStartBatch.setBatchid(batchId);
+
+        const tpcpCmd = new tpcp_schema.TpcpCmd();
         tpcpCmd.setCmdstartbatch(cmdStartBatch);
-        tpcpCmd.setMsgtype(pb_schema.TpcpMsgType.STARTBATCHTYPE);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.STARTBATCHTYPE);
         const bytes = tpcpCmd.serializeBinary();
-        console.log("binary " + bytes)
 
-    
-
-
+        // Send and wait for response
         client.message({
             requestMsg: bytes
         }, function (err, response) {
-            console.log("### response", response);
-
-            // temp dirty, received as string, convert back to bytes....TBD
             const rbytes = str2buf(response.responseMsg);
-            const tpcpRsp = pb_schema.TpcpRsp.deserializeBinary(rbytes);
-            console.log("rspMsg ", tpcpRsp)
-        
-        
-            console.log("##2 tpcpRsp", tpcpRsp.getMsgtype());
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(rbytes);
         
             // Assume response is correct type
             const rspStartBatch = tpcpRsp.getRspstartbatch();
-            console.log("rspStartBatch", rspStartBatch);
             const errCode = rspStartBatch.getErrcode();
             const errMsg = rspStartBatch.getErrmsg();
-            console.log("-- rec --", errCode, errMsg);
 
             if (errCode != 0) {
                 console.log('Failed: ' + errMsg);
+                return;
             }
+            console.log('Ok');
         });
         return;
     }
 
     if (cmd === 'pause') {
+        console.log('Pausing...');
 
-        console.log('Pausing');
+        const cmdPause = new tpcp_schema.CmdPause();
 
-        const tpcpCmd = new pb_schema.TpcpCmd();
-        const cmdPause = new pb_schema.CmdPause();
+        const tpcpCmd = new tpcp_schema.TpcpCmd();
         tpcpCmd.setCmdpause(cmdPause);
-        tpcpCmd.setMsgtype(pb_schema.TpcpMsgType.PAUSETYPE);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.PAUSETYPE);
         const bytes = tpcpCmd.serializeBinary();
 
-
-
+        // Send and wait for response
         client.message({
             requestMsg: bytes
         }, function (err, response) {
-
-            console.log("### response", response);
-
-            // temp dirty, received as string, convert back to bytes....TBD
             const rbytes = str2buf(response.responseMsg);
-            const tpcpRsp = pb_schema.TpcpRsp.deserializeBinary(rbytes);
-            console.log("rspMsg ", tpcpRsp)
-        
-        
-            console.log("##2 tpcpRsp", tpcpRsp.getMsgtype());
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(rbytes);
         
             // Assume response is correct type
             const rspPause = tpcpRsp.getRsppause();
-            console.log("rspPause", rspPause);
             const errCode = rspPause.getErrcode();
             const errMsg = rspPause.getErrmsg();
-            console.log("-- rec --", errCode, errMsg);
 
             if (errCode != 0) {
                 console.log('Failed: ' + errMsg);
+                return;
             }
+            console.log('ok');
         });
         return;
     }
+
+     if (!cmd || cmd === "getPeState") {
+        const cmdGetProductionEngineStatus = new tpcp_schema.CmdGetProductionEngineStatus();
+  
+
+        const tpcpCmd = new tpcp_schema.TpcpCmd();
+        tpcpCmd.setCmdgetproductionenginestatus(cmdGetProductionEngineStatus);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE);
+        const bytes = tpcpCmd.serializeBinary();
+
+        // Send and wait for response
+        client.message({
+            requestMsg: bytes
+        }, function (err, response) {
+            const rbytes = str2buf(response.responseMsg);
+            const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(rbytes);
+        
+            // Assume response is correct type
+            const rspGetProductionEngineStatus = tpcpRsp.getRspgetproductionenginestatus();
+
+            switch(rspGetProductionEngineStatus.getState()) {
+                case tpcp_schema.ProductionEngineState.STOPPED: state = 'Stopped'; break;
+                case tpcp_schema.ProductionEngineState.PAUSED: state = 'Paused'; break;
+                case tpcp_schema.ProductionEngineState.RUNNING: state = 'Running'; break;
+                default: state = 'Unknown: ' + rspGetProductionEngineStatus.getState(); break;
+            }
+
+            console.log("ProductionEngineStatus");
+            console.log("State:", state);
+            console.log("BatchId:", rspGetProductionEngineStatus.getBatchid());
+            console.log("LayoutName:", rspGetProductionEngineStatus.getLayoutname());
+            console.log("BatchSize:", rspGetProductionEngineStatus.getBatchsize());
+            console.log("BoardsCompleted:", rspGetProductionEngineStatus.getBoardscompleted());
+            console.log("ComponentsPerBoard:", rspGetProductionEngineStatus.getComponentsperboard());
+            console.log("ComponentsLeft:", rspGetProductionEngineStatus.getComponentsleft());
+            console.log("ComponentsMissing:", rspGetProductionEngineStatus.getComponentsmissing());
+        });
+        return;
+     }
 
 //     if (cmd === 'play') {
 //         console.log('Starting...');
@@ -334,14 +285,6 @@ function main() {
 //             console.log('NotificationStatus:');
 //             console.log(response);
 // //            console.log(response.notifications[1].runtimeData[1]);
-//         });
-//         return;
-//     }
-
-//     if (!cmd || cmd === "getPeState") {
-//         client.getProdEngineStatus({}, function (err, response) {
-//             console.log('ProductionEngineStatus:');
-//             console.log('State:', response);
 //         });
 //         return;
 //     }

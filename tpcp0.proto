@@ -39,16 +39,16 @@ package tpcp0;
 // ProductionEngine status
 /////////////////////////////////////////////////////////////////////
 
-message ProductionEngineStatus {
-  ProductionEngineState state = 1;
-  string batchId = 2;               // Unique id for this batch
-  string layoutName = 3;            // Currently loaded layout
-  int32 batchSize = 4;              // Number of boards in this batch
-  int32 boardsCompleted = 5;        // No boards completed since batch start
-  int32 componentsPerBoard = 6;     // No components to be placed by this machine per board
-  int32 componentsLeft = 7;         // No components still to be mounted on current board
-  int32 componentsMissing = 8;      // No components not available for competion of board
-}
+// message ProductionEngineStatus {
+//   ProductionEngineState state = 1;
+//   string batchId = 2;               // Unique id for this batch
+//   string layoutName = 3;            // Currently loaded layout
+//   int32 batchSize = 4;              // Number of boards in this batch
+//   int32 boardsCompleted = 5;        // No boards completed since batch start
+//   int32 componentsPerBoard = 6;     // No components to be placed by this machine per board
+//   int32 componentsLeft = 7;         // No components still to be mounted on current board
+//   int32 componentsMissing = 8;      // No components not available for competion of board
+// }
 
 enum ProductionEngineState {
     Unknown = 0;
@@ -200,6 +200,7 @@ enum TpcpMsgType {
   PlayType = 2;
   PauseType = 3;
   StopType = 4;
+  GetProductionEngineStatusType = 7;
 
   NoType = 99999;
 }
@@ -213,6 +214,7 @@ message TpcpCmd {
     CmdPlay cmdPlay = 4;  
     CmdPause cmdPause = 5;  
     CmdStop cmdStop = 6;  
+    CmdGetProductionEngineStatus cmdGetProductionEngineStatus = 7;
   }
 }
 
@@ -225,6 +227,7 @@ message TpcpRsp {
     RspPlay rspPlay = 4;  
     RspPause rspPause = 5;  
     RspStop rspStop = 6;  
+    RspGetProductionEngineStatus rspGetProductionEngineStatus = 7;
   }
 }
 
@@ -236,11 +239,23 @@ message TpcpRsp {
 
 
 message CmdStartBatch {
-    string batchId = 1;               // Unique id for this batch
-    string layoutName = 2;            // Currently loaded layout
-    int32 batchSize = 3;              // Number of boards in this batch
+  string batchId = 1;               // Unique id for this batch
+  string layoutName = 2;            // Currently loaded layout
+  int32 batchSize = 3;              // Number of boards in this batch
 }
 message RspStartBatch {int32 errCode = 1; string errMsg = 2;}
+
+message CmdGetProductionEngineStatus {}
+message RspGetProductionEngineStatus {
+  ProductionEngineState state = 1;
+  string batchId = 2;               // Unique id for this batch
+  string layoutName = 3;            // Currently loaded layout
+  int32 batchSize = 4;              // Number of boards in this batch
+  int32 boardsCompleted = 5;        // No boards completed since batch start
+  int32 componentsPerBoard = 6;     // No components to be placed by this machine per board
+  int32 componentsLeft = 7;         // No components still to be mounted on current board
+  int32 componentsMissing = 8;      // No components not available for competion of board
+}
 
 message CmdSwitchToTUI {}
 message RspSwitchToTUI {int32 errCode = 1; string errMsg = 2;}
