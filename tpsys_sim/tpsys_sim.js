@@ -4,6 +4,7 @@
  */
 var readline = require('readline');
 
+////////////// gRPC tunnel stuff ////////////////////////////
 var PROTO_PATH = '../tunnel.proto';
 
 var grpc = require('grpc');
@@ -18,6 +19,39 @@ var packageDefinition = protoLoader.loadSync(
         oneofs: true
     });
 var myProto = grpc.loadPackageDefinition(packageDefinition).tunnel;
+
+
+////////////////// amqp for subscriptions /////////////////////////
+
+var amqp = require('amqplib/callback_api');
+var subscriptionAmqpChannel
+var exchangeName = 'topic_ppMachines';
+
+amqp.connect('amqp://localhost', function(error0, connection) {
+  if (error0) {
+    throw error0;
+  }
+  connection.createChannel(function(error1, channel) {
+    if (error1) {
+      throw error1;
+    }
+    subscriptionAmqpChannel = channel;
+
+    channel.assertExchange(exchangeName, 'topic', {
+      durable: false
+    });
+
+
+
+    // var exchange = 'topic_ppMachines';
+    // var key = 'anonymous.info';
+    // channel.publish(exchange, key, Buffer.from(msg));
+    // console.log(" [x] Sent %s:'%s'", key, msg);
+  });
+});
+
+  ///////////////////////////////////////////
+
 
 var prodEngineSubscription = null;
 var magSubscription = null;
@@ -253,8 +287,8 @@ function handleSubsPe(call, callback) {
     rspSubsPe.setErrcode(-1);
     rspSubsPe.setErrmsg("NotAssigned");
 
-
     console.log("SubsPe");
+    notSubscription = true;
 
     rspSubsPe.setErrcode(0);
     rspSubsPe.setErrmsg("ok");
@@ -429,7 +463,7 @@ var prevMagStateJsonStr = null;
 var prevNotStateJsonStr = null;
 
 function quick() {
-    setTimeout(quick, 30);
+    setTimeout(quick, 300);
     // IF mag 4 is disabled, simulate missing components
     if(myMagSlots[4].state === 'Present' || myMagSlots[4].state === 'Empty') {
         myProductionEngine.componentsMissing = 25;
@@ -487,12 +521,9 @@ function quick() {
     if (productionEngineJsonStr !== prevPeStateJsonStr) {
         prevPeStateJsonStr = productionEngineJsonStr;
 
-        if (prodEngineSubscription) {
-            writeOk = prodEngineSubscription.write(myProductionEngine);
-            if (!writeOk) {
-                prodEngineSubscription = null; // assume client is disconnected
-                console.log('PeSubs write fail, turn off');
-            }
+        if (notSubscription) {
+            var key = machineId + '.ProductionEngine';
+            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
         }
     }
 
@@ -696,11 +727,13 @@ function startImageStream() {
  * Starts an RPC server that receives requests for the Greeter service at the
  * sample server port
  */
+machineId = '0';
 function main() {
     portNo = '50000';
     if (process.argv.length >= 3) {
-        portNo = '5000' + process.argv[2];
+        machineId = process.argv[2];
     }
+    portNo = '5000' + machineId;
 
     var server = new grpc.Server();
     server.addService(myProto.TunnelService.service, {

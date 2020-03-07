@@ -10,7 +10,9 @@ myQueueName = "TheTestClientPP"
 
 amqp = require("amqplib/callback_api");
 var amqpChannel;
+var amqpConnection;
 amqp.connect('amqp://localhost', (err,conn) => {
+    amqpConnection = conn;
     conn.createChannel((err, ch) => {
 
         ch.assertQueue(myQueueName);
@@ -166,7 +168,8 @@ function main() {
     const tpcpCmd = new tpcp_schema.TpcpCmd();
     tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.NOTYPE); // Set to real cmd if valid cmd-arg is found
 
-    requestQueue = "Machine" + process.argv[2];
+    machineId = process.argv[2]
+    requestQueue = "Machine" + machineId;
 
 
 
@@ -202,6 +205,7 @@ function main() {
         console.log('subsPe - Subscribe production engine status');
         console.log('subsMag - Subscribe mag status');
         console.log('subsNot - Subscribe notification status');
+        console.log('monitor - [topic [topic...]] Monitor messages from status topics eg monitor 0.ProductionEngine');
         console.log('=====================');
     }
 
@@ -379,6 +383,50 @@ function main() {
 //         channel3.on("data", presentStatus);
 //         return;
 //     }
+
+    if (cmd === 'monitor') {
+        var bindings = ['#'];
+
+        if (process.argv.length >= 5) {
+            bindings = process.argv.slice(4);
+        }
+        bindings.forEach( function(binding) {
+            console.log('binding: ', binding);
+        });
+
+
+        amqpConnection.createChannel(function(error1, channel) {
+            if (error1) {
+              throw error1;
+            }
+            var exchange = 'topic_ppMachines';
+        
+            channel.assertExchange(exchange, 'topic', {
+              durable: false
+            });
+        
+            channel.assertQueue('', {
+              exclusive: true
+            }, function(error2, q) {
+              if (error2) {
+                throw error2;
+              }
+              console.log('Waiting for status updates. To exit press CTRL+C');
+        
+              bindings.forEach(function(key) {
+                channel.bindQueue(q.queue, exchange, key);
+              });
+        
+              channel.consume(q.queue, function(msg) {
+                console.log("Got:", msg.fields.routingKey, msg.content.toString());
+              }, {
+                noAck: true
+              });
+            });
+        });
+        return;
+    }
+
 
     //
     // If a command have been set, send it.
