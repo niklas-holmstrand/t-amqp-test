@@ -202,6 +202,8 @@ enum TpcpMsgType {
   StopType = 4;
   GetProductionEngineStatusType = 7;
   SubsPeType = 8;
+  SubsMagazineStatusType = 9;
+  SubsNotificationStatusType = 10;
 
   NoType = 99999;
 }
@@ -217,6 +219,8 @@ message TpcpCmd {
     CmdStop cmdStop = 6;  
     CmdGetProductionEngineStatus cmdGetProductionEngineStatus = 7;
     CmdSubsPe cmdSubsPe = 8;  
+    CmdSubsPe cmdSubsMagazineStatus = 9;  
+    CmdSubsPe cmdSubsNotificationStatus = 10;  
   }
 }
 
@@ -231,6 +235,8 @@ message TpcpRsp {
     RspStop rspStop = 6;  
     RspGetProductionEngineStatus rspGetProductionEngineStatus = 7;
     RspSubsPe rspSubsPe = 8;  
+    RspSubsPe rspSubsMagazineStatus = 9;  
+    RspSubsPe rspSubsNotificationStatus = 10;  
   }
 }
 
@@ -270,6 +276,10 @@ message CmdStop {}
 message RspStop {int32 errCode = 1; string errMsg = 2;}
 message CmdSubsPe {}
 message RspSubsPe {int32 errCode = 1; string errMsg = 2;}
+message CmdSubsMagazineStatus {}
+message RspSubsMagazineStatus {int32 errCode = 1; string errMsg = 2;}
+message CmdSubsNotificationStatus {}
+message RspSubsNotificationStatus {int32 errCode = 1; string errMsg = 2;}
   
 message CmdNqrLoadBoard { bool ok = 1;} // ok = True: board have been loaded, start proceed. ok = False: No board have been loaded. Pause production.
 message RspNqrLoadBoard {int32 errCode = 1; string errMsg = 2;}

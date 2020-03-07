@@ -6,7 +6,7 @@ const tpcp_schema = require("../tpcp0_pb");
 const resMgr_schema = require("../resource_mgr_pb");
 
 myClientId = "TheTestClientPP"
-myQueueName = "TheTestClientPP"
+myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)
 
 amqp = require("amqplib/callback_api");
 var amqpChannel;
@@ -135,6 +135,27 @@ handleResponse = function(packet) {
                         }
                         console.log("SubsPe ok");
                         break;
+
+                case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:
+                    const rspSubsMagazineStatus = tpcpRsp.getRspsubsmagazinestatus();
+
+                    if(rspSubsMagazineStatus.getErrcode()) {
+                        console.log("SubsMagazineStatus - error, errCode/errMsg:", rspSubsMagazineStatus.getErrcode(), rspSubsMagazineStatus.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("SubsMagazineStatus ok");
+                    break;
+
+                case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:
+                    const rspSubsNotificationStatus = tpcpRsp.getRspsubsnotificationstatus();
+
+                    if(rspSubsNotificationStatus.getErrcode()) {
+                        console.log("SubsNotificationStatus - error, errCode/errMsg:", rspSubsNotificationStatus.getErrcode(), rspSubsNotificationStatus.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("SubsNotificationStatus ok");
+                    break;
+    
         
                 default:
                     console.log("Unknown tpcp message type received:", tpcpRspType);
@@ -298,6 +319,42 @@ function main() {
   
         tpcpCmd.setCmdsubspe(cmdSubsPe);
         tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.SUBSPETYPE);
+    }
+
+    if (cmd === 'subsMag') {
+        // subscribe = true;
+        
+        // if (process.argv.length >= 5) {
+        //     subscribe = process.argv[4]
+        // }
+        // if(subscribe) {
+            console.log('Subscribing magazine status');
+        // } else {
+        //     console.log('Unubscribing production engine');
+        // }
+
+        const cmdSubsMagazineStatus = new tpcp_schema.CmdSubsMagazineStatus();
+  
+        tpcpCmd.setCmdsubsmagazinestatus(cmdSubsMagazineStatus);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE);
+    }
+
+    if (cmd === 'subsNot') {
+        // subscribe = true;
+        
+        // if (process.argv.length >= 5) {
+        //     subscribe = process.argv[4]
+        // }
+        // if(subscribe) {
+            console.log('Subscribing notification status');
+        // } else {
+        //     console.log('Unubscribing production engine');
+        // }
+
+        const cmdSubsNotificationStatus = new tpcp_schema.CmdSubsNotificationStatus();
+  
+        tpcpCmd.setCmdsubsnotificationstatus(cmdSubsNotificationStatus);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE);
     }
 
 

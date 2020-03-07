@@ -14,6 +14,46 @@ node tpsys_sim.js [machineNo = 0,1...]
 stdin commands: magrem (slotNo), magbut (slotno), magins (slotno) (name)
 
 
+To access machine directly via gRPC-tunnel (incomplete!)
+cd cli_client
+node cli_client.js <machineNo> <cmd>
+example
+node cli_client 0 play
+
+
+
+To start a resource manager connecting to machine and AMQP-server
+cd resource_mgr
+node resource_mgr.js <machineNo>
+
+
+To start AMQP-server
+Make sure docker and rabbitMq image is available
+./start_mq.sh
+
+
+To acces machines from ampq client
+cd resource_mgr
+node test_client_pp.js <machineNo> <cmd>
+Note cmd "monitor" for subscribing to different topics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+============================= old stuff =======================================
+
+
 Access the tpsys simmulator from cli
 cd cli_client
 node cli_client.js  [machineNo] [cmd]

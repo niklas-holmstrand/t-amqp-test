@@ -42,11 +42,6 @@ amqp.connect('amqp://localhost', function(error0, connection) {
     });
 
 
-
-    // var exchange = 'topic_ppMachines';
-    // var key = 'anonymous.info';
-    // channel.publish(exchange, key, Buffer.from(msg));
-    // console.log(" [x] Sent %s:'%s'", key, msg);
   });
 });
 
@@ -158,6 +153,18 @@ function handleCmd(call, callback) {
             tpcpRsp.setRspsubspe(rspSubsPe);
             break;
 
+        case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:
+            const cmdSubsMagazineStatus = tpcpCmd.getCmdsubsmagazinestatus();
+            rspSubsMagazineStatus = handleSubsMagazineStatus(cmdSubsMagazineStatus);
+            tpcpRsp.setRspsubsmagazinestatus(rspSubsMagazineStatus);
+            break;
+
+        case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:
+            const cmdSubsNotificationStatus = tpcpCmd.getCmdsubsnotificationstatus();
+            rspSubsNotificationStatus = handleSubsNotificationStatus(cmdSubsNotificationStatus);
+            tpcpRsp.setRspsubsnotificationstatus(rspSubsNotificationStatus);
+            break;
+                        
             default:
             console.log("Unknown cmd:", tpcpCmd.getMsgtype());
             process.exit(-1);
@@ -230,7 +237,7 @@ function handlePause(cmdPause) {
     if (myProductionEngine.state != 'Running') {
         rspPause.setErrcode(-1);
         rspPause.setErrmsg('Not allowed in current state');
-        return rspPause;
+        return rspPause;NotificationStatus
     }
 
     console.log("Pausing")
@@ -265,7 +272,7 @@ function handleStop(call, callback) {
     rspStop.setErrcode(-1);
     rspStop.setErrmsg("NotAssigned");
 
-    if (myProductionEngine.state != 'Paused') {
+    if (myProductionEngine.state != 'Stopped') {
         rspStop.setErrcode(-1);
         rspStop.setErrmsg('Not allowed in current state');
         return rspStop;
@@ -287,14 +294,42 @@ function handleSubsPe(call, callback) {
     rspSubsPe.setErrcode(-1);
     rspSubsPe.setErrmsg("NotAssigned");
 
+
     console.log("SubsPe");
-    notSubscription = true;
+    prodEngineSubscription = true;
 
     rspSubsPe.setErrcode(0);
     rspSubsPe.setErrmsg("ok");
     return rspSubsPe;
 }
 
+function handleSubsMagazineStatus(call, callback) {
+    const rspSubsMagazineStatus = new tpcp_schema.RspSubsMagazineStatus();
+    rspSubsMagazineStatus.setErrcode(-1);
+    rspSubsMagazineStatus.setErrmsg("NotAssigned");
+
+
+    console.log("SubsMagazineStatus");
+    magSubscription = true;
+
+    rspSubsMagazineStatus.setErrcode(0);
+    rspSubsMagazineStatus.setErrmsg("ok");
+    return rspSubsMagazineStatus;
+}
+
+function handleSubsNotificationStatus(call, callback) {
+    const rspSubsNotificationStatus = new tpcp_schema.RspSubsNotificationStatus();
+    rspSubsNotificationStatus.setErrcode(-1);
+    rspSubsNotificationStatus.setErrmsg("NotAssigned");
+
+
+    console.log("SubsNotificationStatus");
+    notSubscription = true;
+
+    rspSubsNotificationStatus.setErrcode(0);
+    rspSubsNotificationStatus.setErrmsg("ok");
+    return rspSubsNotificationStatus;
+}
 
 
 // function getMagazineStatus(call, callback) {
@@ -419,21 +454,6 @@ function handleSubsPe(call, callback) {
 
 
 
-// function subscribeMagazineStatus(call, callback) {
-//     console.log('subs mags');
-//     magSubscription = call;
-
-//     const msg = { magSlots: myMagSlots }
-//     magSubscription.write(msg);
-// }
-
-// function subscribeNotificationStatus(call, callback) {
-//     console.log('subs notif');
-//     notSubscription = call;
-
-//     const msg = { notifications: myNotifications }
-//     notSubscription.write(msg);
-// }
 
 // function subscribeCameraImages(call, callback) {
 //     console.log('subs subscribeCameraImages');
@@ -521,13 +541,12 @@ function quick() {
     if (productionEngineJsonStr !== prevPeStateJsonStr) {
         prevPeStateJsonStr = productionEngineJsonStr;
 
-        if (notSubscription) {
+        if (prodEngineSubscription) {
             var key = machineId + '.ProductionEngine';
             subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
         }
     }
-
-
+    
     //
     // Report any changes in Notification to any subscriber
     // Very ugly string comparsion due to problems comparing/cloning arrays. ToBeImproved.
@@ -537,12 +556,8 @@ function quick() {
         prevNotStateJsonStr = notificationJsonStr;
 
         if (notSubscription) {
-            const msg = { notifications: myNotifications }
-            writeOk = notSubscription.write(msg);
-            if (!writeOk) {
-                notSubscription = null; // assume client is disconnected
-                console.log('Not write fail, turn off');
-            }
+            var key = machineId + '.Notifications';
+            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
         }
     }
 
@@ -556,13 +571,8 @@ function quick() {
         prevMagStateJsonStr = magJsonStr
 
         if (magSubscription) {
-            console.log('MagSubs write');
-            const msg = { magSlots: myMagSlots }
-            writeOk = magSubscription.write(msg);
-            if (!writeOk) {
-                magSubscription = null; // assume client is disconnected
-                console.log('MagSubs write fail, turn off');
-            }
+            var key = machineId + '.ComponentLoading';
+            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
         }
     }
 
