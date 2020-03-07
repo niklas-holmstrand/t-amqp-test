@@ -7,7 +7,8 @@ amqp = require("amqplib/callback_api");
 
 var amqpChannel;
 const requestQueue = 'Machine'+ machineId;
-
+var exchangeName = 'topic_ppMachines';
+var subscriptionAmqpChannel;
 
 amqp.connect('amqp://localhost', (err,conn) => {
     conn.createChannel((err, ch) => {
@@ -21,6 +22,18 @@ amqp.connect('amqp://localhost', (err,conn) => {
             handleMessage(message.content);
         }, {noAck: true });
     });   
+
+    conn.createChannel(function(error1, channel) {
+        if (error1) {
+          throw error1;
+        }
+        subscriptionAmqpChannel = channel;
+    
+        channel.assertExchange(exchangeName, 'topic', {
+          durable: false
+        });
+      });
+    
 });
 
 //
@@ -52,6 +65,42 @@ console.log("tunnel started on:", hostAndPort);
 //
 const pb_schema = require("../resource_mgr_pb");
 
+var myStatus = {
+    resMgrRunning: true,
+    resourceConnected: false,
+    resourceBusy: false,
+    controlOwner: ''
+};
+
+//
+// Emit status
+//
+emitStatus = function() {
+    var key = machineId + '.ResourceState';
+    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myStatus)));
+}
+setTimeout(emitStatus, 100); // send fresh status at start
+
+//
+// Handle heartbeat subscription
+//
+function handleHeartBeatSubscription() {
+    setTimeout(handleHeartBeatSubscription, 300);
+    if(myStatus.resourceConnected) {        // If already connected
+        return;                             // skip trying subcribe
+    }
+
+    channel = tunnel.subscribeHeartBeats('putte');
+    channel.on("data", function(heartBeat) {
+        if(myStatus.resourceConnected == false) {
+            myStatus.resourceConnected = true; 
+            emitStatus();
+        }
+    });  
+    channel.on("error", () => { if(myStatus.resourceConnected) {myStatus.resourceConnected = false; emitStatus();}});  
+    channel.on("end", () => { if(myStatus.resourceConnected) {myStatus.resourceConnected = false; emitStatus();}});  
+}
+setTimeout(handleHeartBeatSubscription, 100);
 
 //
 // Handle incomming requests

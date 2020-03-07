@@ -31,6 +31,7 @@ amqp.connect('amqp://localhost', function(error0, connection) {
   if (error0) {
     throw error0;
   }
+
   connection.createChannel(function(error1, channel) {
     if (error1) {
       throw error1;
@@ -40,9 +41,8 @@ amqp.connect('amqp://localhost', function(error0, connection) {
     channel.assertExchange(exchangeName, 'topic', {
       durable: false
     });
-
-
   });
+
 });
 
   ///////////////////////////////////////////
@@ -104,6 +104,20 @@ var imageFeederObj = {
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
 const tpcp_schema = require("../tpcp0_pb");
+var heartBeatSubscription;
+
+function subscribeHeartBeats(call, callback) {
+    console.log('subscribeHeartBeats');
+    heartBeatSubscription = call;
+    heartBeatSubscription.write('bomp');
+}
+function heartBeat() {
+    setTimeout(heartBeat, 500);
+    if(heartBeatSubscription) {
+        heartBeatSubscription.write('bomp');
+    }
+}
+setTimeout(heartBeat, 500);
 
 function handleCmd(call, callback) {
     const tpcpRsp = new tpcp_schema.TpcpRsp();
@@ -747,7 +761,8 @@ function main() {
 
     var server = new grpc.Server();
     server.addService(myProto.TunnelService.service, {
-        message: handleCmd
+        message: handleCmd,
+        subscribeHeartBeats: subscribeHeartBeats
     });
     server.bind('0.0.0.0:' + portNo, grpc.ServerCredentials.createInsecure());
     server.start();

@@ -10,7 +10,7 @@ service TunnelService {
 
   // Status handling
   rpc message(Request) returns (Response) {}
-
+  rpc subscribeHeartBeats(Dummy) returns (stream HeartBeat) {}
 }
 
 
@@ -24,4 +24,11 @@ message Request {
 }
 message Response {
   string responseMsg = 1;
+}
+
+message HeartBeat {
+  string dummy = 1;
+}
+message Dummy {
+  string dummy = 1;
 }
