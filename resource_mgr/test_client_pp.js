@@ -108,7 +108,7 @@ handleResponse = function(packet) {
                     const rspPlay = tpcpRsp.getRspplay();
 
                     if(rspPlay.getErrcode()) {
-                        console.log("Play - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
+                        console.log("Play - error, errCode/errMsg:", rspPlay.getErrcode(), rspPlay.getErrmsg())
                         process.exit(0);
                     }
                     console.log("Play ok")
@@ -118,16 +118,26 @@ handleResponse = function(packet) {
                     const rspStop = tpcpRsp.getRspstop();
 
                     if(rspStop.getErrcode()) {
-                        console.log("Stop - error, errCode/errMsg:", rspPause.getErrcode(), rspPause.getErrmsg())
+                        console.log("Stop - error, errCode/errMsg:", rspStop.getErrcode(), rspStop.getErrmsg())
                         process.exit(0);
                     }
                     console.log("Stop ok")
                     break;
     
-                    default:
+                case tpcp_schema.TpcpMsgType.SUBSPETYPE:
+                        const rspSubsPe = tpcpRsp.getRspsubspe();
+    
+                        if(rspSubsPe.getErrcode()) {
+                            console.log("SubsPe - error, errCode/errMsg:", rspSubsPe.getErrcode(), rspSubsPe.getErrmsg())
+                            process.exit(0);
+                        }
+                        console.log("SubsPe ok");
+                        break;
+        
+                default:
                     console.log("Unknown tpcp message type received:", tpcpRspType);
-
-            }
+    
+                }
         break;
     }
 
@@ -268,6 +278,26 @@ function main() {
     }
 
 
+    if (cmd === 'subsPe') {
+        // subscribe = true;
+        
+        // if (process.argv.length >= 5) {
+        //     subscribe = process.argv[4]
+        // }
+        // if(subscribe) {
+            console.log('Subscribing production engine');
+        // } else {
+        //     console.log('Unubscribing production engine');
+        // }
+
+        const cmdSubsPe = new tpcp_schema.CmdSubsPe();
+  
+        tpcpCmd.setCmdsubspe(cmdSubsPe);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.SUBSPETYPE);
+    }
+
+
+
 //     if (cmd === 'rspLoadBoard') {
 //         ok = true;
 //         //console.log(process.argv.length, process.argv);
@@ -331,14 +361,6 @@ function main() {
 //             console.log(response);
 // //            console.log(response.notifications[1].runtimeData[1]);
 //         });
-//         return;
-//     }
-
-//     if (cmd === 'subsPe') {
-//         console.log('Subscribing production engine');
-
-//         channel = client.subscribeProdEngineStatus({});
-//         channel.on("data", presentStatus);
 //         return;
 //     }
 

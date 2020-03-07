@@ -118,6 +118,12 @@ function handleCmd(call, callback) {
             tpcpRsp.setRspstop(rspStop);
             break;
 
+        case tpcp_schema.TpcpMsgType.SUBSPETYPE:
+            const cmdSubsPe = tpcpCmd.getCmdsubspe();
+            rspSubsPe = handleSubsPe(cmdSubsPe);
+            tpcpRsp.setRspsubspe(rspSubsPe);
+            break;
+
             default:
             console.log("Unknown cmd:", tpcpCmd.getMsgtype());
             process.exit(-1);
@@ -242,6 +248,20 @@ function handleStop(call, callback) {
     return rspStop;
 }
 
+function handleSubsPe(call, callback) {
+    const rspSubsPe = new tpcp_schema.RspSubsPe();
+    rspSubsPe.setErrcode(-1);
+    rspSubsPe.setErrmsg("NotAssigned");
+
+
+    console.log("SubsPe");
+
+    rspSubsPe.setErrcode(0);
+    rspSubsPe.setErrmsg("ok");
+    return rspSubsPe;
+}
+
+
 
 // function getMagazineStatus(call, callback) {
 //     console.log("GetMagazineStatus")
@@ -364,12 +384,6 @@ function handleStop(call, callback) {
 // }
 
 
-
-// function subscribeProdEngineStatus(call, callback) {
-//     console.log('subs PE');
-//     prodEngineSubscription = call;
-//     prodEngineSubscription.write(myProductionEngine);
-// }
 
 // function subscribeMagazineStatus(call, callback) {
 //     console.log('subs mags');
