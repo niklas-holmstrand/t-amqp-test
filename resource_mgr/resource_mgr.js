@@ -90,6 +90,7 @@ function handleHeartBeatSubscription() {
         return;                             // skip trying subcribe
     }
 
+    process.stdout.write(".");
     channel = tunnel.subscribeHeartBeats('putte');
     channel.on("data", function(heartBeat) {
         if(myStatus.resourceConnected == false) {
