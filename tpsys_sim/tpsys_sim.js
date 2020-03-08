@@ -48,9 +48,9 @@ amqp.connect('amqp://localhost', function(error0, connection) {
   ///////////////////////////////////////////
 
 
-var prodEngineSubscription = null;
-var magSubscription = null;
-var notSubscription = null;
+var prodEngineSubscription = true;
+var magSubscription = true;
+var notSubscription = true;
 var cameraImagesSubscription = null;
 
 var fs = require('fs');

@@ -26,20 +26,77 @@ amqp.connect('amqp://localhost', (err,conn) => {
       console.log(err);
       process.exit(-1);
     }
+
+    // Setup my input queue
     conn.createChannel((err, ch) => {
 
         ch.assertQueue(myQueueName);
         amqpChannel = ch;
 
-        // Setup consumer
         amqpChannel.consume(myQueueName, (message) => {
             // console.log('Got amqp pck');
             handleAmqpResponse(message.content);
         }, {noAck: true });
 
-    });   
+    }); 
+    
+    // Setup my status subscription queue
+    conn.createChannel(function(error1, channel) {
+      if (error1) { throw error1; }
+
+      var exchange = 'topic_ppMachines';
+      channel.assertExchange(exchange, 'topic', {
+        durable: false
+      });
+    
+      channel.assertQueue('', {
+        exclusive: true
+      }, function(error2, q) {
+        if (error2) { throw error2; }
+    
+        channel.bindQueue(q.queue, exchange, "#");
+    
+        channel.consume(q.queue, 
+          handleStatusUpdates, 
+          { noAck: true }
+        );
+      }); 
+    })
+    
 });
 
+
+function handleStatusUpdates(msg) {
+  topic = msg.fields.routingKey.split(".");
+  machineId = topic[0];
+  rootTopic = topic[1]
+  recState = JSON.parse(msg.content.toString());
+  //console.log("Handle status update", machineId, rootTopic, recState);
+
+  // find in myMachines
+  // If different update status & actions
+  i = myMachines.findIndex(m => m.id == machineId);
+  if(i == -1) {
+    //console.log('myMachines:', myMachines);
+    console.log('Got status from unknown machine!', machineId, rootTopic, recState);
+    return;
+  }
+
+
+  if (rootTopic == "ResourceState") {
+    console.log("Handle RS");
+    if(myMachines[i].connected != recState.resourceConnected) {
+      myMachines[i].connected = recState.resourceConnected;
+      pubsub.publish(MachineConnectionStatusChanged_TOPIC + machineId, {machine: myMachines[i]})
+      pubsub.publish(MachineConnectionStatusChanged_TOPIC, {machines: myMachines})
+    }
+  }
+
+  if (rootTopic == "ProductionEngine") {
+    //console.log("Handle PE");
+    pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
+  }
+}
 
 
 const {_} = require('lodash')
@@ -280,11 +337,11 @@ const resolvers = {
     },
     layouts: () => myLayouts,
     machines: () => myMachines,
-  //   machine: (root, args) => {
-  //     return _.find(myMachines, (m) => {
-  //       return m.id === _.parseInt(args.machineId)
-  //     })
-  //   },
+    machine: (root, args) => {
+      return _.find(myMachines, (m) => {
+        return m.id === _.parseInt(args.machineId)
+      })
+    },
   //  getFeederImage: (root, args) => { return getFeederImage(args.machineId) },
   //  getFeederImageOffset: (root, args) => { return getFeederImageOffset(args.machineId, args.x, args.y) },
   //  moveCamX: (root, args) => { return moveCamX(args.x) },
@@ -523,9 +580,9 @@ const resolvers = {
 
   },
   Subscription: {
-    // productionEngine: {
-    //   subscribe: (root, args) => pubsub.asyncIterator(ProdEngineChanged_TOPIC + args.machineId),
-    // },
+    productionEngine: {
+      subscribe: (root, args) => pubsub.asyncIterator(ProdEngineChanged_TOPIC + args.machineId),
+    },
     // magazineStatus: {
     //   subscribe: (root, args) => pubsub.asyncIterator(MagStatusChanged_TOPIC + args.machineId),
     // },
@@ -535,12 +592,12 @@ const resolvers = {
     // notifications: {
     //   subscribe: () => pubsub.asyncIterator(NotStatusChanged_TOPIC),
     // },
-    // machines: {
-    //   subscribe: () => pubsub.asyncIterator(MachineConnectionStatusChanged_TOPIC),
-    // },
-    // machine: {
-    //   subscribe: (root, args) => pubsub.asyncIterator(MachineConnectionStatusChanged_TOPIC + args.machineId),
-    // },
+    machines: {
+      subscribe: () => pubsub.asyncIterator(MachineConnectionStatusChanged_TOPIC),
+    },
+    machine: {
+      subscribe: (root, args) => pubsub.asyncIterator(MachineConnectionStatusChanged_TOPIC + args.machineId),
+    },
     // eventHappened: {
     //   subscribe: () => pubsub.asyncIterator('eventHappened')
     // }
