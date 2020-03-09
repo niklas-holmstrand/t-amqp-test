@@ -40,6 +40,21 @@ handleResponse = function(packet) {
     resmgrMsgType = resmgrRsp.getMsgtype();
 
     switch(resmgrMsgType) {
+        case resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE:
+
+            const rspUpdateStatus = resmgrRsp.getRspupdatestatus();
+
+            errCode  = rspUpdateStatus.getErrcode();
+            errMsg  = rspUpdateStatus.getErrmsg();
+
+            if (errCode) {
+                console.log("Resource mgr error: errcode/msg:", errCode, errMsg);
+                return;
+            }
+
+            console.log("Resource mgr status update ok");
+            break;
+
         case resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE:
 
             const rspSendRequest = resmgrRsp.getRspsendrequest();
@@ -226,6 +241,7 @@ function main() {
         console.log('subsPe - Subscribe production engine status');
         console.log('subsMag - Subscribe mag status');
         console.log('subsNot - Subscribe notification status');
+        console.log('resMgrUs - Update status from resource mgr (never seen by tpsys)');
         console.log('monitor - [topic [topic...]] Monitor messages from status topics eg monitor 0.ProductionEngine');
         console.log('=====================');
     }
@@ -441,6 +457,24 @@ function main() {
 //         return;
 //     }
 
+    if (cmd === 'resMgrUs') {
+        console.log('Update resMgr status');
+
+        const cmdUpdateStatus = new resMgr_schema.CmdUpdateStatus();
+
+        const resmgrCmd = new resMgr_schema.ResmgrCmd();
+        resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE);
+        resmgrCmd.setResponsequeue(myQueueName);
+        resmgrCmd.setCmdupdatestatus(cmdUpdateStatus);
+
+        const bytes = resmgrCmd.serializeBinary();
+        packet = Buffer.from(bytes)
+        amqpChannel.assertQueue(requestQueue);
+        amqpChannel.sendToQueue(requestQueue, packet);
+
+        return;
+    }
+
     if (cmd === 'monitor') {
         var bindings = ['#'];
 
@@ -503,7 +537,7 @@ function main() {
         // Put in resource_mgr envelop
         //
         const resmgrCmd = new resMgr_schema.ResmgrCmd();
-        resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUEST);
+        resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
         resmgrCmd.setResponsequeue(myQueueName);
         resmgrCmd.setCmdsendrequest(cmdSendRequest);
 

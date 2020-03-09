@@ -84,7 +84,7 @@ function handleStatusUpdates(msg) {
 
 
   if (rootTopic == "ResourceState") {
-    console.log("Handle RS");
+    console.log("Got ResourceState machineId", machineId);
     if(myMachines[i].connected != recState.resourceConnected) {
       myMachines[i].connected = recState.resourceConnected;
       pubsub.publish(MachineConnectionStatusChanged_TOPIC + machineId, {machine: myMachines[i]})
@@ -93,7 +93,6 @@ function handleStatusUpdates(msg) {
   }
 
   if (rootTopic == "ProductionEngine") {
-    //console.log("Handle PE");
     pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
   }
 }
@@ -216,6 +215,23 @@ const getNotifications = () => {
 // }
 
 ////////////////////////////////////////////////
+function resMgrUpdateStatus (machineId) {
+
+  const cmdUpdateStatus = new resMgr_schema.CmdUpdateStatus();
+  const resmgrCmd = new resMgr_schema.ResmgrCmd();
+  resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE);
+  resmgrCmd.setResponsequeue(myQueueName);
+  resmgrCmd.setCmdupdatestatus(cmdUpdateStatus);
+
+  requestQueue = 'Machine' + machineId;
+  const bytes = resmgrCmd.serializeBinary();
+  packet = Buffer.from(bytes)
+  amqpChannel.assertQueue(requestQueue);
+  amqpChannel.sendToQueue(requestQueue, packet);
+
+  return;
+}
+
 function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
     const tpcpCmd = new tpcp_schema.TpcpCmd();
 
@@ -239,7 +255,7 @@ function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
     // Put in resource_mgr envelop
     //
     const resmgrCmd = new resMgr_schema.ResmgrCmd();
-    resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUEST);
+    resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
     resmgrCmd.setResponsequeue(myQueueName);
     resmgrCmd.setCmdsendrequest(cmdSendRequest);
 
@@ -267,6 +283,10 @@ handleAmqpResponse = function(packet) {
     resmgrMsgType = resmgrRsp.getMsgtype();
 
     switch(resmgrMsgType) {
+      case resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE:
+        console.log('Ignored resMgr UpdateStatus rsp');
+        break;
+
       case resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE:
 
           const rspSendRequest = resmgrRsp.getRspsendrequest();
@@ -307,7 +327,6 @@ handleAmqpResponse = function(packet) {
     }
 }
 
-////////////////////////////////////////////////
 const resolvers = {
   Query: {
     info: () => `This is the API of MyPnP machines`,
@@ -651,22 +670,51 @@ async function initialize() {
   return await getFactoryData();
 }
 
-initialize().then(factory => {
-  myMachines = factory.myMachines;
-  myProductionLines = factory.myProductionLines;
-  myLayouts = factory.myLayouts;
-
-  // connectMachines(myMachines)
-
-  // Now start subscriptions
-  // .. keep track of changes on each machine
-  // prevMachines = _.cloneDeep(myMachines)
-  // setTimeout(handleSubscriptions, 500);
-});
 
 const gQlServer = new GraphQLServer({
   typeDefs,
   resolvers,
 })
 
-gQlServer.start(() => console.log(`Server is running on http://localhost:4000`))
+
+function printFactoryState () {
+  myMachines.forEach(m => {
+    console.log(m.id, m.name, ' Connected:', m.connected ); 
+  });
+}
+
+function sleep(millis) {
+  return new Promise(resolve => setTimeout(resolve, millis));
+}
+
+async function main() {
+  gQlServer.start(() => console.log(`Server is running on http://localhost:4000`))
+
+  //
+  // Wait for data connection is ready, then init my factory data
+  //
+  factory = await initialize();
+  myMachines = factory.myMachines;
+  myProductionLines = factory.myProductionLines;
+  myLayouts = factory.myLayouts;
+
+  // Give node some time to connect amqp
+  await sleep(200);
+
+  // 
+  // To know what machines that are currently up: Try refresh connection status for all expected machines
+  // the responses (to the cmd, not the status update) will be ignored
+  //
+  myMachines.forEach(m => { resMgrUpdateStatus(m.id); });
+
+  //
+  // After short delay
+  // expect all available resmgr to have responded ie myMachines indicates what machines that are available
+  // Refresh subscription status for all of them.
+  //
+  await sleep(200);
+  printFactoryState();
+  return;
+}
+
+main()

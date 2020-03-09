@@ -15,27 +15,27 @@ package resourceMgr;
 enum ResmgrMsgType {
   SendRequestType = 0;
   ReserveResourceType = 1;
-  GetStatusType = 2;
+  UpdateStatusType = 2;
  }
 
 message ResmgrCmd {
-  ResmgrMsgType msgType = 1; // stupid, should not be necessary!
-  string responseQueue = 2; // Where to post response
+  ResmgrMsgType msgType = 1;      // What is the payload?
+  string responseQueue = 2;       // Where to post response
 
   oneof payload {
     CmdSendRequest cmdSendRequest = 3;
     CmdReserveResource cmdReserveResource = 4;
-    CmdGetStatus cmdGetStatus = 5;
+    CmdUpdateStatus cmdUpdateStatus = 5;
   }
 }
 
 message ResmgrRsp {
-  ResmgrMsgType msgType = 1; // stupid, should not be necessary!
+  ResmgrMsgType msgType = 1; 
 
   oneof payload {
     RspSendRequest rspSendRequest = 3;
     RspReserveResource rspReserveResource = 4;
-    RspGetStatus rspGetStatus = 5;
+    RspUpdateStatus rspUpdateStatus = 5;
   }
 }
 
@@ -59,22 +59,21 @@ message RspSendRequest {
 }
 
 message CmdReserveResource {
-      string clientId = 1;               // Unique id for client.
+  string clientId = 1;               // Unique id for client.
   string request = 2;                // payload
 }
 
 message RspReserveResource {
   int32 errCode = 1;
   string errMsg = 2;
-  // No payload
 }
 
-message CmdGetStatus {
+message CmdUpdateStatus {       // Resend current status. Some new client needs to init cache.
 }
 
-message RspGetStatus {
-  bool executingCmd = 1;      // executing command right now
-  bool reserved = 2;          
-  string ownerClientId = 3;        // If reserved, by who?
+message RspUpdateStatus {
+  int32 errCode = 1;
+  string errMsg = 2;
 }
+
 

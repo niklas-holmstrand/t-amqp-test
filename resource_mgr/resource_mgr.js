@@ -165,16 +165,24 @@ handleMessage = function(msg) {
             });
             break;
 
-        case pb_schema.ResmgrMsgType.RESERVERESOURCETYPE:
-            console.log('### 1 ');
-            const cmdReserveResource = resmgrCmd.getCmdreserveresource();
+        case pb_schema.ResmgrMsgType.UPDATESTATUSTYPE:
+            const cmdUpdateStatus = resmgrCmd.getCmdupdatestatus();
 
-            clientId  = cmdReserveResource.getClientid();
-            console.log('got CmdReserveResource ', clientId);
+            emitStatus();
 
-            break;
+            const rspUpdateStatus = new pb_schema.RspUpdateStatus();
+            rspUpdateStatus.setErrcode(0);
+            rspUpdateStatus.setErrmsg("ok");
+
+            const resmgrRsp = new pb_schema.ResmgrRsp();
+            resmgrRsp.setMsgtype(pb_schema.ResmgrMsgType.UPDATESTATUSTYPE);
+            resmgrRsp.setRspupdatestatus(rspUpdateStatus);
+
+            const bytes = resmgrRsp.serializeBinary();                
+            packet = Buffer.from(bytes)
+            amqpChannel.sendToQueue(responseQueue, packet);
+        break;
     }
-    console.log('### 2 ');
 };
 
 
