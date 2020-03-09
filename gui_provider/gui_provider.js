@@ -65,7 +65,6 @@ amqp.connect('amqp://localhost', (err,conn) => {
     
 });
 
-
 function handleStatusUpdates(msg) {
   topic = msg.fields.routingKey.split(".");
   machineId = topic[0];
@@ -93,9 +92,54 @@ function handleStatusUpdates(msg) {
   }
 
   if (rootTopic == "ProductionEngine") {
+    updateStatusCashe(machineId, productionEnginesCashe, recState);
     pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
   }
+
+  if (rootTopic == "Notifications") {
+    updateStatusCashe(machineId, notificationStatusCashe, recState);
+    pubsub.publish(NotStatusChanged_TOPIC + machineId, {notifications: recState});
+  }
+
+  if (rootTopic == "ComponentLoading") {
+    console.log('Magazine status recieved:', machineId, recState);
+    updateStatusCashe(machineId, magazineStatusCashe, recState);
+    pubsub.publish(MagStatusChanged_TOPIC + machineId, {magazineStatus: recState});
+  }
+
 }
+
+//////////
+//
+// Status chashing
+//
+productionEnginesCashe = []; // Will contain vector {id: <machineId>: state: <PE-object>}
+notificationStatusCashe = []; // Will contain vector {id: <machineId>: state: <not-object>}
+magazineStatusCashe = []; // Will contain vector {id: <machineId>: state: <mag-object>}
+
+//
+// update cashe with new state. Add to chashe if no status is recorded yet
+//
+function updateStatusCashe(machineId, cashe, newState) {
+  i = cashe.findIndex(record => record.id == machineId);
+  if(i == -1) {
+    cashe.push({id: machineId, state: newState});
+  } else {
+    cashe[i].state = newState;
+  }
+}
+
+function getCashedStatus(machineId, cashe) {
+    i = cashe.findIndex(record => record.id == machineId);
+  if(i == -1) {
+    console.log('no state cached for machine:', machineId);
+    return null;
+  } else {
+    return cashe[i].state;
+  }
+
+}
+
 
 
 const {_} = require('lodash')
@@ -239,6 +283,10 @@ function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
 
     switch(tpcpType) {
       case tpcp_schema.TpcpMsgType.PAUSETYPE:       tpcpCmd.setCmdpause(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSPETYPE:       tpcpCmd.setCmdsubspe(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:       tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:       tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
+
       default: console.log('Unknown tpcp cmd type: ', tpcpType); return;
     }
 
@@ -312,16 +360,32 @@ handleAmqpResponse = function(packet) {
 
 
           switch(tpcpRspType) {
-              case tpcp_schema.TpcpMsgType.PAUSETYPE:
-                  const rspPause = tpcpRsp.getRsppause();
-                  if(cmdPromiseTrigger) {
-                    cmdPromiseTrigger(rspPause)
-                  }
-                  cmdPromiseTrigger = null;
+            case tpcp_schema.TpcpMsgType.PAUSETYPE:
+              const rspPause = tpcpRsp.getRsppause();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspPause) }
+              cmdPromiseTrigger = null;
+              break;
 
-                  break;
+            case tpcp_schema.TpcpMsgType.SUBSPETYPE:
+              const rspSubsPe = tpcpRsp.getRspsubspe();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspSubsPe) }
+              cmdPromiseTrigger = null;
+              break;
 
-                  default: console.log('Unknown tpcp cmd type: ', tpcpType); return;
+            case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:
+              const rspSubsMagazineStatus = tpcpRsp.getRspsubsmagazinestatus();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspSubsMagazineStatus) }
+              cmdPromiseTrigger = null;
+              break;
+
+            case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:
+              const rspSubsNotificationStatus = tpcpRsp.getRspsubsnotificationstatus();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspSubsNotificationStatus) }
+              cmdPromiseTrigger = null;
+              break;
+            
+
+            default: console.log('Unknown tpcp type on rsp: ', tpcpRspType); return;
           }
       break;
     }
@@ -331,13 +395,12 @@ const resolvers = {
   Query: {
     info: () => `This is the API of MyPnP machines`,
     getTest: () => ({ id: 1, name: "Marcel" }),
-    // productionEngine: (root, args) => {
-    //   return getPeState(args.machineId);
-    // },
-    // magazineStatus: (root, args) => {
-    //   const magState = getMagState(args.machineId);
-    //   return magState ? magState.magSlots : [];
-    // },
+    productionEngine: (root, args) => {
+      return getCashedStatus(args.machineId, productionEnginesCashe);
+    },
+    magazineStatus: (root, args) => {
+      return getCashedStatus(args.machineId, magazineStatusCashe);
+    },
     // notificationStatus: (root, args) => {
     //   const notificationsState = getNotState(args.machineId)
     //   if (!_.isEmpty(notificationsState)) {
@@ -602,9 +665,9 @@ const resolvers = {
     productionEngine: {
       subscribe: (root, args) => pubsub.asyncIterator(ProdEngineChanged_TOPIC + args.machineId),
     },
-    // magazineStatus: {
-    //   subscribe: (root, args) => pubsub.asyncIterator(MagStatusChanged_TOPIC + args.machineId),
-    // },
+    magazineStatus: {
+      subscribe: (root, args) => pubsub.asyncIterator(MagStatusChanged_TOPIC + args.machineId),
+    },
     // notificationStatus: {
     //   subscribe: (root, args) => pubsub.asyncIterator(NotStatusChanged_TOPIC + args.machineId),
     // },
@@ -710,11 +773,21 @@ async function main() {
   //
   // After short delay
   // expect all available resmgr to have responded ie myMachines indicates what machines that are available
-  // Refresh subscription status for all of them.
+  // Make them send complete fresh status
   //
   await sleep(200);
+  myMachines.forEach(m => { 
+    if(m.connected) {
+      const cmdSubsPe = new tpcp_schema.CmdSubsPe();
+      sendRequest(cmdSubsPe, tpcp_schema.TpcpMsgType.SUBSPETYPE, m.id);
+      const cmdSubsMagazineStatus = new tpcp_schema.CmdSubsMagazineStatus();
+      sendRequest(cmdSubsMagazineStatus, tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE, m.id);
+      const cmdSubsNotificationStatus = new tpcp_schema.CmdSubsNotificationStatus();
+      sendRequest(cmdSubsNotificationStatus, tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE, m.id);
+    } 
+  });
+
   printFactoryState();
-  return;
 }
 
 main()

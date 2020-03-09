@@ -45,7 +45,20 @@ amqp.connect('amqp://localhost', function(error0, connection) {
 
 });
 
-  ///////////////////////////////////////////
+function emitProductionEngineStatus() {
+    var key = machineId + '.ProductionEngine';
+    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
+}
+function emitNotificationStatus() {
+    var key = machineId + '.Notifications';
+    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
+}
+function emitMagasineStatus() {
+    var key = machineId + '.ComponentLoading';
+    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
+}
+
+///////////////////////////////////////////
 
 
 var prodEngineSubscription = true;
@@ -311,6 +324,7 @@ function handleSubsPe(call, callback) {
 
     console.log("SubsPe");
     prodEngineSubscription = true;
+    emitProductionEngineStatus();
 
     rspSubsPe.setErrcode(0);
     rspSubsPe.setErrmsg("ok");
@@ -325,6 +339,7 @@ function handleSubsMagazineStatus(call, callback) {
 
     console.log("SubsMagazineStatus");
     magSubscription = true;
+    emitMagasineStatus();
 
     rspSubsMagazineStatus.setErrcode(0);
     rspSubsMagazineStatus.setErrmsg("ok");
@@ -339,6 +354,7 @@ function handleSubsNotificationStatus(call, callback) {
 
     console.log("SubsNotificationStatus");
     notSubscription = true;
+    emitNotificationStatus();
 
     rspSubsNotificationStatus.setErrcode(0);
     rspSubsNotificationStatus.setErrmsg("ok");
@@ -556,8 +572,7 @@ function quick() {
         prevPeStateJsonStr = productionEngineJsonStr;
 
         if (prodEngineSubscription) {
-            var key = machineId + '.ProductionEngine';
-            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
+            emitProductionEngineStatus()
         }
     }
     
@@ -570,8 +585,7 @@ function quick() {
         prevNotStateJsonStr = notificationJsonStr;
 
         if (notSubscription) {
-            var key = machineId + '.Notifications';
-            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
+            emitNotificationStatus()
         }
     }
 
@@ -585,8 +599,7 @@ function quick() {
         prevMagStateJsonStr = magJsonStr
 
         if (magSubscription) {
-            var key = machineId + '.ComponentLoading';
-            subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
+            emitMagasineStatus()
         }
     }
 

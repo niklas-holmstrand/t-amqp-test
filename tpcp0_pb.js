@@ -2388,8 +2388,8 @@ proto.tpcp0.TpcpCmd.toObject = function(includeInstance, msg) {
     cmdstop: (f = msg.getCmdstop()) && proto.tpcp0.CmdStop.toObject(includeInstance, f),
     cmdgetproductionenginestatus: (f = msg.getCmdgetproductionenginestatus()) && proto.tpcp0.CmdGetProductionEngineStatus.toObject(includeInstance, f),
     cmdsubspe: (f = msg.getCmdsubspe()) && proto.tpcp0.CmdSubsPe.toObject(includeInstance, f),
-    cmdsubsmagazinestatus: (f = msg.getCmdsubsmagazinestatus()) && proto.tpcp0.CmdSubsPe.toObject(includeInstance, f),
-    cmdsubsnotificationstatus: (f = msg.getCmdsubsnotificationstatus()) && proto.tpcp0.CmdSubsPe.toObject(includeInstance, f)
+    cmdsubsmagazinestatus: (f = msg.getCmdsubsmagazinestatus()) && proto.tpcp0.CmdSubsMagazineStatus.toObject(includeInstance, f),
+    cmdsubsnotificationstatus: (f = msg.getCmdsubsnotificationstatus()) && proto.tpcp0.CmdSubsNotificationStatus.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -2466,13 +2466,13 @@ proto.tpcp0.TpcpCmd.deserializeBinaryFromReader = function(msg, reader) {
       msg.setCmdsubspe(value);
       break;
     case 9:
-      var value = new proto.tpcp0.CmdSubsPe;
-      reader.readMessage(value,proto.tpcp0.CmdSubsPe.deserializeBinaryFromReader);
+      var value = new proto.tpcp0.CmdSubsMagazineStatus;
+      reader.readMessage(value,proto.tpcp0.CmdSubsMagazineStatus.deserializeBinaryFromReader);
       msg.setCmdsubsmagazinestatus(value);
       break;
     case 10:
-      var value = new proto.tpcp0.CmdSubsPe;
-      reader.readMessage(value,proto.tpcp0.CmdSubsPe.deserializeBinaryFromReader);
+      var value = new proto.tpcp0.CmdSubsNotificationStatus;
+      reader.readMessage(value,proto.tpcp0.CmdSubsNotificationStatus.deserializeBinaryFromReader);
       msg.setCmdsubsnotificationstatus(value);
       break;
     default:
@@ -2572,7 +2572,7 @@ proto.tpcp0.TpcpCmd.serializeBinaryToWriter = function(message, writer) {
     writer.writeMessage(
       9,
       f,
-      proto.tpcp0.CmdSubsPe.serializeBinaryToWriter
+      proto.tpcp0.CmdSubsMagazineStatus.serializeBinaryToWriter
     );
   }
   f = message.getCmdsubsnotificationstatus();
@@ -2580,7 +2580,7 @@ proto.tpcp0.TpcpCmd.serializeBinaryToWriter = function(message, writer) {
     writer.writeMessage(
       10,
       f,
-      proto.tpcp0.CmdSubsPe.serializeBinaryToWriter
+      proto.tpcp0.CmdSubsNotificationStatus.serializeBinaryToWriter
     );
   }
 };
@@ -2864,17 +2864,17 @@ proto.tpcp0.TpcpCmd.prototype.hasCmdsubspe = function() {
 
 
 /**
- * optional CmdSubsPe cmdSubsMagazineStatus = 9;
- * @return {?proto.tpcp0.CmdSubsPe}
+ * optional CmdSubsMagazineStatus cmdSubsMagazineStatus = 9;
+ * @return {?proto.tpcp0.CmdSubsMagazineStatus}
  */
 proto.tpcp0.TpcpCmd.prototype.getCmdsubsmagazinestatus = function() {
-  return /** @type{?proto.tpcp0.CmdSubsPe} */ (
-    jspb.Message.getWrapperField(this, proto.tpcp0.CmdSubsPe, 9));
+  return /** @type{?proto.tpcp0.CmdSubsMagazineStatus} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.CmdSubsMagazineStatus, 9));
 };
 
 
 /**
- * @param {?proto.tpcp0.CmdSubsPe|undefined} value
+ * @param {?proto.tpcp0.CmdSubsMagazineStatus|undefined} value
  * @return {!proto.tpcp0.TpcpCmd} returns this
 */
 proto.tpcp0.TpcpCmd.prototype.setCmdsubsmagazinestatus = function(value) {
@@ -2901,17 +2901,17 @@ proto.tpcp0.TpcpCmd.prototype.hasCmdsubsmagazinestatus = function() {
 
 
 /**
- * optional CmdSubsPe cmdSubsNotificationStatus = 10;
- * @return {?proto.tpcp0.CmdSubsPe}
+ * optional CmdSubsNotificationStatus cmdSubsNotificationStatus = 10;
+ * @return {?proto.tpcp0.CmdSubsNotificationStatus}
  */
 proto.tpcp0.TpcpCmd.prototype.getCmdsubsnotificationstatus = function() {
-  return /** @type{?proto.tpcp0.CmdSubsPe} */ (
-    jspb.Message.getWrapperField(this, proto.tpcp0.CmdSubsPe, 10));
+  return /** @type{?proto.tpcp0.CmdSubsNotificationStatus} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.CmdSubsNotificationStatus, 10));
 };
 
 
 /**
- * @param {?proto.tpcp0.CmdSubsPe|undefined} value
+ * @param {?proto.tpcp0.CmdSubsNotificationStatus|undefined} value
  * @return {!proto.tpcp0.TpcpCmd} returns this
 */
 proto.tpcp0.TpcpCmd.prototype.setCmdsubsnotificationstatus = function(value) {
@@ -3010,8 +3010,8 @@ proto.tpcp0.TpcpRsp.toObject = function(includeInstance, msg) {
     rspstop: (f = msg.getRspstop()) && proto.tpcp0.RspStop.toObject(includeInstance, f),
     rspgetproductionenginestatus: (f = msg.getRspgetproductionenginestatus()) && proto.tpcp0.RspGetProductionEngineStatus.toObject(includeInstance, f),
     rspsubspe: (f = msg.getRspsubspe()) && proto.tpcp0.RspSubsPe.toObject(includeInstance, f),
-    rspsubsmagazinestatus: (f = msg.getRspsubsmagazinestatus()) && proto.tpcp0.RspSubsPe.toObject(includeInstance, f),
-    rspsubsnotificationstatus: (f = msg.getRspsubsnotificationstatus()) && proto.tpcp0.RspSubsPe.toObject(includeInstance, f)
+    rspsubsmagazinestatus: (f = msg.getRspsubsmagazinestatus()) && proto.tpcp0.RspSubsMagazineStatus.toObject(includeInstance, f),
+    rspsubsnotificationstatus: (f = msg.getRspsubsnotificationstatus()) && proto.tpcp0.RspSubsNotificationStatus.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -3088,13 +3088,13 @@ proto.tpcp0.TpcpRsp.deserializeBinaryFromReader = function(msg, reader) {
       msg.setRspsubspe(value);
       break;
     case 9:
-      var value = new proto.tpcp0.RspSubsPe;
-      reader.readMessage(value,proto.tpcp0.RspSubsPe.deserializeBinaryFromReader);
+      var value = new proto.tpcp0.RspSubsMagazineStatus;
+      reader.readMessage(value,proto.tpcp0.RspSubsMagazineStatus.deserializeBinaryFromReader);
       msg.setRspsubsmagazinestatus(value);
       break;
     case 10:
-      var value = new proto.tpcp0.RspSubsPe;
-      reader.readMessage(value,proto.tpcp0.RspSubsPe.deserializeBinaryFromReader);
+      var value = new proto.tpcp0.RspSubsNotificationStatus;
+      reader.readMessage(value,proto.tpcp0.RspSubsNotificationStatus.deserializeBinaryFromReader);
       msg.setRspsubsnotificationstatus(value);
       break;
     default:
@@ -3194,7 +3194,7 @@ proto.tpcp0.TpcpRsp.serializeBinaryToWriter = function(message, writer) {
     writer.writeMessage(
       9,
       f,
-      proto.tpcp0.RspSubsPe.serializeBinaryToWriter
+      proto.tpcp0.RspSubsMagazineStatus.serializeBinaryToWriter
     );
   }
   f = message.getRspsubsnotificationstatus();
@@ -3202,7 +3202,7 @@ proto.tpcp0.TpcpRsp.serializeBinaryToWriter = function(message, writer) {
     writer.writeMessage(
       10,
       f,
-      proto.tpcp0.RspSubsPe.serializeBinaryToWriter
+      proto.tpcp0.RspSubsNotificationStatus.serializeBinaryToWriter
     );
   }
 };
@@ -3486,17 +3486,17 @@ proto.tpcp0.TpcpRsp.prototype.hasRspsubspe = function() {
 
 
 /**
- * optional RspSubsPe rspSubsMagazineStatus = 9;
- * @return {?proto.tpcp0.RspSubsPe}
+ * optional RspSubsMagazineStatus rspSubsMagazineStatus = 9;
+ * @return {?proto.tpcp0.RspSubsMagazineStatus}
  */
 proto.tpcp0.TpcpRsp.prototype.getRspsubsmagazinestatus = function() {
-  return /** @type{?proto.tpcp0.RspSubsPe} */ (
-    jspb.Message.getWrapperField(this, proto.tpcp0.RspSubsPe, 9));
+  return /** @type{?proto.tpcp0.RspSubsMagazineStatus} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.RspSubsMagazineStatus, 9));
 };
 
 
 /**
- * @param {?proto.tpcp0.RspSubsPe|undefined} value
+ * @param {?proto.tpcp0.RspSubsMagazineStatus|undefined} value
  * @return {!proto.tpcp0.TpcpRsp} returns this
 */
 proto.tpcp0.TpcpRsp.prototype.setRspsubsmagazinestatus = function(value) {
@@ -3523,17 +3523,17 @@ proto.tpcp0.TpcpRsp.prototype.hasRspsubsmagazinestatus = function() {
 
 
 /**
- * optional RspSubsPe rspSubsNotificationStatus = 10;
- * @return {?proto.tpcp0.RspSubsPe}
+ * optional RspSubsNotificationStatus rspSubsNotificationStatus = 10;
+ * @return {?proto.tpcp0.RspSubsNotificationStatus}
  */
 proto.tpcp0.TpcpRsp.prototype.getRspsubsnotificationstatus = function() {
-  return /** @type{?proto.tpcp0.RspSubsPe} */ (
-    jspb.Message.getWrapperField(this, proto.tpcp0.RspSubsPe, 10));
+  return /** @type{?proto.tpcp0.RspSubsNotificationStatus} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.RspSubsNotificationStatus, 10));
 };
 
 
 /**
- * @param {?proto.tpcp0.RspSubsPe|undefined} value
+ * @param {?proto.tpcp0.RspSubsNotificationStatus|undefined} value
  * @return {!proto.tpcp0.TpcpRsp} returns this
 */
 proto.tpcp0.TpcpRsp.prototype.setRspsubsnotificationstatus = function(value) {

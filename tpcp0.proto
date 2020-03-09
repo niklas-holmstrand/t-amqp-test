@@ -204,7 +204,8 @@ enum TpcpMsgType {
   SubsPeType = 8;
   SubsMagazineStatusType = 9;
   SubsNotificationStatusType = 10;
-
+//  UpdateStatusType = 11;
+  
   NoType = 99999;
 }
 
@@ -219,8 +220,10 @@ message TpcpCmd {
     CmdStop cmdStop = 6;  
     CmdGetProductionEngineStatus cmdGetProductionEngineStatus = 7;
     CmdSubsPe cmdSubsPe = 8;  
-    CmdSubsPe cmdSubsMagazineStatus = 9;  
-    CmdSubsPe cmdSubsNotificationStatus = 10;  
+    CmdSubsMagazineStatus cmdSubsMagazineStatus = 9;  
+    CmdSubsNotificationStatus cmdSubsNotificationStatus = 10;  
+//    CmdUpdateStatus cmdUpdateStatus = 11;  
+    
   }
 }
 
@@ -235,8 +238,9 @@ message TpcpRsp {
     RspStop rspStop = 6;  
     RspGetProductionEngineStatus rspGetProductionEngineStatus = 7;
     RspSubsPe rspSubsPe = 8;  
-    RspSubsPe rspSubsMagazineStatus = 9;  
-    RspSubsPe rspSubsNotificationStatus = 10;  
+    RspSubsMagazineStatus rspSubsMagazineStatus = 9;  
+    RspSubsNotificationStatus rspSubsNotificationStatus = 10;  
+//    RspUpdateStatus rspUpdateStatus = 11;  
   }
 }
 
@@ -274,12 +278,16 @@ message CmdPause {}
 message RspPause {int32 errCode = 1; string errMsg = 2;}
 message CmdStop {}
 message RspStop {int32 errCode = 1; string errMsg = 2;}
+
 message CmdSubsPe {}
 message RspSubsPe {int32 errCode = 1; string errMsg = 2;}
 message CmdSubsMagazineStatus {}
 message RspSubsMagazineStatus {int32 errCode = 1; string errMsg = 2;}
 message CmdSubsNotificationStatus {}
 message RspSubsNotificationStatus {int32 errCode = 1; string errMsg = 2;}
+
+// message CmdUpdateStatus {}
+// message RspUpdateStatus {int32 errCode = 1; string errMsg = 2;}
   
 message CmdNqrLoadBoard { bool ok = 1;} // ok = True: board have been loaded, start proceed. ok = False: No board have been loaded. Pause production.
 message RspNqrLoadBoard {int32 errCode = 1; string errMsg = 2;}
