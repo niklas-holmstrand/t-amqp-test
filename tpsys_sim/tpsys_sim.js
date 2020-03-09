@@ -299,7 +299,7 @@ function handleStop(call, callback) {
     rspStop.setErrcode(-1);
     rspStop.setErrmsg("NotAssigned");
 
-    if (myProductionEngine.state != 'Stopped') {
+    if (myProductionEngine.state != 'Paused') {
         rspStop.setErrcode(-1);
         rspStop.setErrmsg('Not allowed in current state');
         return rspStop;

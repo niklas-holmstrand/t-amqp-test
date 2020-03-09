@@ -282,8 +282,11 @@ function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
     tpcpCmd.setMsgtype(tpcpType);
 
     switch(tpcpType) {
-      case tpcp_schema.TpcpMsgType.PAUSETYPE:       tpcpCmd.setCmdpause(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.SUBSPETYPE:       tpcpCmd.setCmdsubspe(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.PLAYTYPE:          tpcpCmd.setCmdplay(tpcpCmdMsg);         break;
+      case tpcp_schema.TpcpMsgType.PAUSETYPE:         tpcpCmd.setCmdpause(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.STOPTYPE:          tpcpCmd.setCmdstop(tpcpCmdMsg);         break;
+      case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:    tpcpCmd.setCmdstartbatch(tpcpCmdMsg);   break;
+      case tpcp_schema.TpcpMsgType.SUBSPETYPE:        tpcpCmd.setCmdsubspe(tpcpCmdMsg);       break;
       case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:       tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
       case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:       tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
 
@@ -360,9 +363,27 @@ handleAmqpResponse = function(packet) {
 
 
           switch(tpcpRspType) {
+            case tpcp_schema.TpcpMsgType.PLAYTYPE:
+              const rspPlay = tpcpRsp.getRspplay();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspPlay) }
+              cmdPromiseTrigger = null;
+              break;
+
             case tpcp_schema.TpcpMsgType.PAUSETYPE:
               const rspPause = tpcpRsp.getRsppause();
               if(cmdPromiseTrigger) { cmdPromiseTrigger(rspPause) }
+              cmdPromiseTrigger = null;
+              break;
+
+            case tpcp_schema.TpcpMsgType.STOPTYPE:
+              const rspStop = tpcpRsp.getRspstop();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspStop) }
+              cmdPromiseTrigger = null;
+              break;
+
+            case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
+              const rspStartBatch = tpcpRsp.getRspstartbatch();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspStartBatch) }
               cmdPromiseTrigger = null;
               break;
 
@@ -390,6 +411,34 @@ handleAmqpResponse = function(packet) {
       break;
     }
 }
+
+//
+// Send a command to machine, wait for its response and return graphQl-response. 
+// Note commands with responses with anything but errmsg and errcode are not supported.
+//
+async function sendCmdWaitRspToGql(cmd, cmdType, machineId, name)
+{
+  console.log('Send: ', name, 'machine', machineId);
+  sendRequest(cmd, cmdType, machineId);
+
+  // wait for response to be received
+  let gqlRes = { errCode: -1, errMsg: 'Err never set - gui provier error!' };
+  const p = new Promise((resolve, reject) => {
+    cmdPromiseTrigger = resolve;
+    setTimeout( function() {reject()}, 5000 );
+  }).then(res => { gqlRes = { errCode: res.getErrcode(), errMsg: res.getErrmsg() } },
+          rej => { gqlRes = { errCode: -9000, errMsg: "GuiProvider:Timeout waiting for response" }}
+  );
+  await p;
+
+  if (gqlRes.errCode != 0) {
+    console.log(name, ' failed: ' + gqlRes.errMsg);
+  }
+
+  console.log(name, ' result: ', machineId, gqlRes); // Temporary
+  return gqlRes
+}
+ 
 
 const resolvers = {
   Query: {
@@ -429,126 +478,41 @@ const resolvers = {
   //  moveCamX: (root, args) => { return moveCamX(args.x) },
   },
   Mutation: {
-    // play: async (root, args) => {
-    //   console.log('play machine: ', args.machineId);
-    //   const gc = grpcConnections.find(c => c.machineId === args.machineId);
-    //   let gqlRes = { errCode: -1, errMsg: 'Err never set - machine agent error!' };
+    play: async (root, args) => {
+      const cmdPlay = new tpcp_schema.CmdPlay();
 
-    //   const p = new Promise(resolve => {
-    //     gc.connection.cmdPlay({}, function (err, response) {
-    //       resolve(response)
-    //     })
-    //   })
-    //   p.then(res => {
-    //     if (!_.isEmpty(res)) gqlRes = { errCode: res.errCode, errMsg: res.errMsg }
-    //   });
-    //   await p;
+      gqlRes = sendCmdWaitRspToGql(cmdPlay, tpcp_schema.TpcpMsgType.PLAYTYPE, args.machineId, "play");
+      await gqlRes;
 
-    //   if (gqlRes.errCode != 0) {
-    //     console.log('Play failed: ' + gqlRes.errMsg);
-    //   }
-
-    //   console.log('Play result: ', args.machineId, gqlRes); // Temporary
-    //   return gqlRes
-    // },
-
-    pause: async (root, args) => {
-      console.log('Pause machine: ', args.machineId);
-      let gqlRes = { errCode: -1, errMsg: 'Err never set - gui provier error!' };
-      
-      const cmdPause = new tpcp_schema.CmdPause();
-      sendRequest(cmdPause, tpcp_schema.TpcpMsgType.PAUSETYPE, args.machineId);
-
-      // wait for response to be received
-      const p = new Promise((resolve, reject) => {
-        cmdPromiseTrigger = resolve;
-        setTimeout( function() {reject()}, 5000 );
-      }).then(res => { gqlRes = { errCode: res.getErrcode(), errMsg: res.getErrmsg() } },
-              rej => { gqlRes = { errCode: -9000, errMsg: "GuiProvider:Timeout waiting for response" }}
-      );
-      await p;
-
-      if (gqlRes.errCode != 0) {
-        console.log('Pause  failed: ' + gqlRes.errMsg);
-      }
-
-      console.log('Pause result: ', args.machineId, gqlRes); // Temporary
       return gqlRes
     },
-/////////////////////////////////
+    pause: async (root, args) => {
+      const cmdPause = new tpcp_schema.CmdPause();
 
-    //   const gc = grpcConnections.find(c => c.machineId === args.machineId);
-    //   let gqlRes = { errCode: -1, errMsg: 'Err never set - machine agent error!' };
+      gqlRes = sendCmdWaitRspToGql(cmdPause, tpcp_schema.TpcpMsgType.PAUSETYPE, args.machineId, "pause");
+      await gqlRes;
 
-    //   const p = new Promise((resolve, reject) => {
-    //     gc.connection.cmdPause({}, function (err, response) {
-    //       resolve(response);
-    //     })
-    //   }).then(res => {
-    //     if (!_.isEmpty(res)) gqlRes = { errCode: res.errCode, errMsg: res.errMsg }
-    //   });
-    //   await p;
+      return gqlRes
+    },
+    stop: async (root, args) => {
+      const cmdStop = new tpcp_schema.CmdStop();
 
-    //   if (gqlRes.errCode != 0) {
-    //     console.log('Pause  failed: ' + gqlRes.errMsg);
-    //   }
+      gqlRes = sendCmdWaitRspToGql(cmdStop, tpcp_schema.TpcpMsgType.STOPTYPE, args.machineId, "stop");
+      await gqlRes;
 
-    //   console.log('Pause result: ', args.machineId, gqlRes); // Temporary
-    //   return gqlRes
-    // },
-//////////////////////////////////////
-    // stop: async (root, args) => {
-    //   console.log('Stop machine: ', args.machineId);
-    //   const gc = grpcConnections.find(c => c.machineId === args.machineId);
-    //   let gqlRes = { errCode: -1, errMsg: 'Err never set - machine agent error!' };
+      return gqlRes
+    },
+    startBatch: async (root, args) => {
+      const cmdStartBatch = new tpcp_schema.CmdStartBatch();
+      cmdStartBatch.setBatchid(args.batchId);
+      cmdStartBatch.setLayoutname(args.layoutName);
+      cmdStartBatch.setBatchsize(args.batchSize);
 
-    //   const p = new Promise((resolve, reject) => {
-    //     gc.connection.cmdStop({}, function (err, response) {
-    //       resolve(response);
-    //     })
-    //   }).then(res => {
-    //     if (!_.isEmpty(res)) gqlRes = { errCode: res.errCode, errMsg: res.errMsg }
-    //   });
-    //   await p;
+      gqlRes = sendCmdWaitRspToGql(cmdStartBatch, tpcp_schema.TpcpMsgType.STARTBATCHTYPE, args.machineId, "startBatch");
+      await gqlRes;
 
-    //   if (gqlRes.errCode != 0) {
-    //     console.log('Stop failed: ' + gqlRes.errMsg);
-    //   }
-
-    //   console.log('Stop result: ', args.machineId, gqlRes); // Temporary
-    //   return gqlRes
-    // },
-
-    // startBatch: async (root, args) => {
-    //   console.log('startBatch ', args)
-    //   const gc = grpcConnections.find(c => c.machineId === args.machineId);
-    //   let gqlRes = { errCode: -1, errMsg: 'Err never set - machine agent error!' };
-
-    //   if (_.isEmpty(args.layoutName)) {
-    //     console.log('startBatch.error: No layout provided.')
-    //     return { errCode: -2, errMsg: 'No layout provided.' }
-    //   }
-
-    //   const p = new Promise((resolve, reject) => {
-    //     gc.connection.cmdStartBatch({
-    //       batchId: args.batchId,
-    //       layoutName: args.layoutName,
-    //       batchSize: args.batchSize
-    //     }, function (err, response) {
-    //       resolve(response);
-    //     })
-    //   }).then(res => {
-    //     if (!_.isEmpty(res)) gqlRes = { errCode: res.errCode, errMsg: res.errMsg }
-    //   });
-    //   await p;
-
-    //   if (gqlRes.errCode != 0) {
-    //     console.log('startBatch failed: ' + gqlRes.errMsg);
-    //   }
-
-    //   console.log('StartBatch result: ', args.machineId, gqlRes); // Temporary
-    //   return gqlRes
-    // },
+      return gqlRes
+    },
 
     // switchToTUI: async (root, args) => {
     //   console.log('switchToTUI machine: ', args.machineId);
