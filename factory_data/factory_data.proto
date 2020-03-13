@@ -1,0 +1,63 @@
+//
+//  Factory data provider
+//
+syntax = "proto3";
+
+
+package resourceMgr;
+
+
+/////////////////////////////////////////////////////////////////////
+// Envelop
+/////////////////////////////////////////////////////////////////////
+
+enum FacdataMsgType {
+  NoType = 0;
+  GetLinesType = 1;
+  GetMachinesType = 2;
+ }
+
+message FacdataCmd {
+  FacdataMsgType msgType = 1;      // What is the payload?
+  string responseQueue = 2;       // Where to post response
+
+  oneof payload {
+    CmdGetLines cmdGetLines = 4;
+    CmdGetMachines cmdGetMachines = 5;
+  }
+}
+
+message FacdataRsp {
+  FacdataMsgType msgType = 1; 
+  int32 errCode = 2;
+  string errMsg = 3;
+
+  oneof payload {
+    RspGetLines rspGetLines = 5;
+    RspGetMachines rspGetMachines = 6;
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////
+// Commands & responses
+/////////////////////////////////////////////////////////////////////
+
+
+
+message CmdGetLines {
+}
+
+message RspGetLines {
+  string lines = 3;                // payload: stringifyed JSON descr, vector of all lines in factory
+}
+
+message CmdGetMachines {
+}
+
+message RspGetMachines {
+  string machines = 3;                // payload: stringifyed JSON descr, vector of all machines in factory
+}
+
+
+
