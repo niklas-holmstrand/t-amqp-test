@@ -5,6 +5,7 @@ const {getFactoryData} = require('./myFactory')
 //const {getFactoryData} = require('./smtDbFactory')
 
 // Cached data. For now only read once
+var myLayouts;
 var myMachines;
 var myProductionLines;
 
@@ -74,6 +75,18 @@ handleMessage = function(msg) {
             facdataRsp.setErrmsg("ok");
         break;
         
+        case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:
+            const rspGetLayouts = new factory_data_schema.RspGetLayouts();
+
+            // For now, just asume data is never changed, use own cache
+            rspGetLayouts.setLayouts(JSON.stringify(myLayouts));
+
+            facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE);
+            facdataRsp.setRspgetlayouts(rspGetLayouts);
+            facdataRsp.setErrcode(0);
+            facdataRsp.setErrmsg("ok");
+        break;
+        
         default: 
             console.log("factory_data: ignoring unexpected cmd type!", cmdType)
     }
@@ -107,6 +120,7 @@ async function main() {
     // Wait for data connection is ready, then init my factory data
     //
     factory = await initialize();
+    myLayouts = factory.myLayouts;
     myMachines = factory.myMachines;
     myProductionLines = factory.myProductionLines;
     console.log('factory_data starting', myProductionLines);

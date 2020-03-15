@@ -61,6 +61,15 @@ handleResponse = function(packet) {
             console.log("Production machines:", machinesData);
             break;
 
+        case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:
+
+            const rspGetLayouts = facdataRsp.getRspgetlayouts();
+            layoutsStr = rspGetLayouts.getLayouts();
+
+            layoutsData = JSON.parse(layoutsStr);
+            console.log("Layouts:", layoutsData);
+            break;
+
         default:
             console.log("Unknown tpcp message type received:", msgType);
         break;
@@ -99,6 +108,7 @@ function main() {
         console.log('<cmd> = One of:');
         console.log('getLines - Get production lines');
         console.log('getMachines - Get machines');
+        console.log('getLayouts - Get layouts');
         console.log('=====================');
         process.exit(0);
     }
@@ -119,6 +129,15 @@ function main() {
 
         facdataCmd.setCmdgetmachines(cmdGetMachines);
         facdataCmd.setMsgtype(factory_data_schema.FacdataMsgType.GETMACHINESTYPE);
+    }
+
+    if (cmd === 'getLayouts') {
+        console.log('Get production layouts...');
+
+        const cmdGetLayouts = new factory_data_schema.CmdGetLayouts();
+
+        facdataCmd.setCmdgetlayouts(cmdGetLayouts);
+        facdataCmd.setMsgtype(factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE);
     }
 
 

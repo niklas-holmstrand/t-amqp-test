@@ -15,6 +15,7 @@ enum FacdataMsgType {
   NoType = 0;
   GetLinesType = 1;
   GetMachinesType = 2;
+  GetLayoutsType = 3;
  }
 
 message FacdataCmd {
@@ -24,6 +25,7 @@ message FacdataCmd {
   oneof payload {
     CmdGetLines cmdGetLines = 4;
     CmdGetMachines cmdGetMachines = 5;
+    CmdGetLayouts cmdGetLayouts = 6;    
   }
 }
 
@@ -35,6 +37,7 @@ message FacdataRsp {
   oneof payload {
     RspGetLines rspGetLines = 5;
     RspGetMachines rspGetMachines = 6;
+    RspGetLayouts rspGetLayouts = 7;    
   }
 }
 
@@ -49,14 +52,21 @@ message CmdGetLines {
 }
 
 message RspGetLines {
-  string lines = 3;                // payload: stringifyed JSON descr, vector of all lines in factory
+  string lines = 1;                // payload: stringifyed JSON descr, vector of all lines in factory
 }
 
 message CmdGetMachines {
 }
 
 message RspGetMachines {
-  string machines = 3;                // payload: stringifyed JSON descr, vector of all machines in factory
+  string machines = 1;                // payload: stringifyed JSON descr, vector of all machines in factory
+}
+
+message CmdGetLayouts {
+}
+
+message RspGetLayouts {
+  string layouts = 1;                // payload: stringifyed JSON descr, vector of all Layouts in factory TBD other domain...
 }
 
 

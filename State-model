@@ -1,0 +1,30 @@
+factory.PnP.Machines.<SNR>.Availability
+                           ProductionEngine
+                           ComponentLoading
+                           Notifications
+                           Parameters.Category
+
+
+
+
+{
+    factory: {
+        PnP : {
+            Machines: {
+
+                0: {
+                    ProductionEngine: {
+                        State: 'Running',
+                        ComponentsLeft: 34,
+                        ComponentsMissing: 3
+                    },
+                    Notifications: {
+                        0: { Type: 23, Severity: 2, RuntimeData: {0: "935631 - Cap 56 uF"}}
+                    }
+                },
+
+                N: {}
+            }
+        }
+    }
+}                           
