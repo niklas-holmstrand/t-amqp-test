@@ -1,5 +1,5 @@
 
-Simulation of tpsys and stack up to GraphQL and react app
+# Simulation of tpsys and stack up to GraphQL and react app
 
 
 If not done already, install needed packages:
@@ -7,6 +7,21 @@ npm install
 cd frontend/tpsys_tiny
 npm install
 
+
+Tha factory configuration is fetched from smtdb or from own hardcoded DB simulation. 
+This selection in done by commenting one of these in factory_data/factory_data.js. The hardcoded
+factory is found in factory_data/myFactory.js
+
+
+## Start all components for a simulated factory in separated gnome-terminal tabs
+
+./spinup_factory.sh
+(if message broker is already running some docker complaints have to be ignored)
+
+If all goes well a all components are started an a webbrowser is opened connected to factory.
+
+
+## Start components manually
 
 Start tpsys simulator:
 cd tpsys_sim
@@ -38,6 +53,15 @@ node test_client_pp.js <machineNo> <cmd>
 Note cmd "monitor" for subscribing to different topics
 
 
+To follow state of factory
+cd status_mon
+node status_mon.js
+
+
+Start tiny gui (dev server)
+cd frontend/tpsys_tiny
+npm start
+browse to localhost:3000 for react gui(s)
 
 
 
@@ -45,13 +69,7 @@ Note cmd "monitor" for subscribing to different topics
 
 
 
-
-
-
-
-
-
-============================= old stuff =======================================
+# ================== old stuff =======================
 
 
 Access the tpsys simmulator from cli

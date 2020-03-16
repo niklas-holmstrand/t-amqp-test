@@ -15,6 +15,8 @@ gnome-terminal --tab -- start_scripts/run_sim.sh 0
 gnome-terminal --tab -- start_scripts/run_resmgr.sh 0
 gnome-terminal --tab -- start_scripts/run_sim.sh 1
 gnome-terminal --tab -- start_scripts/run_resmgr.sh 1
+gnome-terminal --tab -- start_scripts/run_sim.sh 2
+gnome-terminal --tab -- start_scripts/run_resmgr.sh 2
 
 # Let machines start before starting GUI provider
 sleep 1
