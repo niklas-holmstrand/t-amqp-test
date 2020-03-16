@@ -57,7 +57,8 @@ Note cmd "monitor" for subscribing to different topics
 
 To follow state of factory
 cd status_mon
-node status_mon.js
+node status_mon.js   - just a dumb thing that collects status updates and presents collected state
+node status_cache.js - builds a cache of all machines and request their data to create a fresh cache
 
 
 Start tiny gui (dev server)
