@@ -76,6 +76,8 @@ var myStatus = {
 // Emit status
 //
 emitStatus = function() {
+    console.log('emit status:', machineId, myStatus);
+
     var key = machineId + '.ResourceState';
     subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myStatus)));
 }
@@ -107,7 +109,7 @@ setTimeout(handleHeartBeatSubscription, 100);
 // Handle incomming requests
 //
 handleMessage = function(msg) {
-    console.log('Handle: ', msg);
+    //console.log('Handle: ', msg);
 
     const resmgrCmd = pb_schema.ResmgrCmd.deserializeBinary(msg);
     responseQueue = resmgrCmd.getResponsequeue();
@@ -139,7 +141,7 @@ handleMessage = function(msg) {
             tunnel.message({
                 requestMsg: payloadStr
             }, function (err, response) {
-                console.log("### response", response);
+                console.log("Got response to request", response);
 
                 if(!response) {
                     console.log("Receied empty response! Ignoring");

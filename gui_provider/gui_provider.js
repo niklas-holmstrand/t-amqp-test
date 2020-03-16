@@ -7,8 +7,6 @@ const {GraphQLServer} = require('graphql-yoga')
 // const {grpcConnection2} = require('./grpc_client2')
 
 const {typeDefs} = require('./graphql_schema')
-const {getFactoryData} = require('./myFactory')
-//const {getFactoryData} = require('./smtDbFactory')
 
 
 const tpcp_schema = require("../tpcp0_pb");
@@ -18,9 +16,9 @@ myQueueName = "GuiProvider";
 
 amqp = require("amqplib/callback_api");
 var amqpChannel;
-//var amqpConnection;
+var amqpConnection;
 amqp.connect('amqp://localhost', (err,conn) => {
-//    amqpConnection = conn;
+    amqpConnection = conn;
     if(err) {
       console.log("No connection to message queue??");
       console.log(err);
@@ -40,28 +38,6 @@ amqp.connect('amqp://localhost', (err,conn) => {
 
     }); 
     
-    // Setup my status subscription queue
-    conn.createChannel(function(error1, channel) {
-      if (error1) { throw error1; }
-
-      var exchange = 'topic_ppMachines';
-      channel.assertExchange(exchange, 'topic', {
-        durable: false
-      });
-    
-      channel.assertQueue('', {
-        exclusive: true
-      }, function(error2, q) {
-        if (error2) { throw error2; }
-    
-        channel.bindQueue(q.queue, exchange, "#");
-    
-        channel.consume(q.queue, 
-          handleStatusUpdates, 
-          { noAck: true }
-        );
-      }); 
-    })
     
 });
 
@@ -273,6 +249,7 @@ function resMgrUpdateStatus (machineId) {
   amqpChannel.assertQueue(requestQueue);
   amqpChannel.sendToQueue(requestQueue, packet);
 
+  console.log('requested status update from machine:', machineId);
   return;
 }
 
@@ -689,14 +666,120 @@ const resolvers = {
 // onNotUpdate(updateNotStat);
 // onCameraImagesUpdate(updateCameraImages);
 
+
+/////////////////////////////////////////////////////////////////////////////////////////
 //
-// Initialize:
-// Get factory configuration and start monitoring if machines are available by trying subscribing
+// fetchFactoryData:
+// Get factory configuration and store in globals....TBD dirty quickie for now
 //
-async function initialize() {
-  return await getFactoryData();
+
+const factory_data_schema = require("../factory_data/factory_data_pb");dataRspQueue = 'GuiProviderFactoryData';
+var lastFacDataReceived;  // Call this to release promise when last response form facData is received. TBD dirty for now...
+
+async function fetchFactoryData() {
+  amqpConnection.createChannel((err, ch) => {
+
+    ch.assertQueue(dataRspQueue);
+    amqpChannel = ch;
+
+    amqpChannel.consume(dataRspQueue, (message) => {
+      handleFactoryDataResponse(message.content);
+    }, {noAck: true });
+  }); 
+
+  const p = new Promise((resolve, reject) => {
+    lastFacDataReceived = resolve;
+    setTimeout( function() {reject()}, 5000 );
+  }).then(res => {  },
+          rej => { console.log("GuiProvider:Timeout waiting for facData" );}
+  );
+
+  sendFactoryDataCmd(new factory_data_schema.CmdGetMachines(),factory_data_schema.FacdataMsgType.GETMACHINESTYPE);
+  sendFactoryDataCmd(new factory_data_schema.CmdGetLines(),factory_data_schema.FacdataMsgType.GETLINESTYPE);
+  sendFactoryDataCmd(new factory_data_schema.CmdGetLayouts(),factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE);
+
+  // Wait for responses
+  return await p;
+ 
 }
 
+
+function sendFactoryDataCmd (cmdMsg, msgType) {
+  facdataCmd = new factory_data_schema.FacdataCmd();
+  facdataCmd.setResponsequeue(dataRspQueue);
+
+  switch(msgType) {
+    case factory_data_schema.FacdataMsgType.GETMACHINESTYPE:          facdataCmd.setCmdgetmachines(cmdMsg);    break;
+    case factory_data_schema.FacdataMsgType.GETLINESTYPE:          facdataCmd.setCmdgetlines(cmdMsg);    break;
+    case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:          facdataCmd.setCmdgetlayouts(cmdMsg);    break;
+    default: console.log('Unknown Factorydata cmd type: ', msgType); return;
+  }
+  facdataCmd.setMsgtype(msgType);
+
+  // Put on message queue
+  requestQueue = 'FactoryDataCmd';
+  const bytes = facdataCmd.serializeBinary();
+  packet = Buffer.from(bytes)
+  amqpChannel.assertQueue(requestQueue);
+  amqpChannel.sendToQueue(requestQueue, packet);
+  
+  console.log('Sent facdata cmd type: ', msgType);
+  return;
+}
+
+handleFactoryDataResponse = function(packet) {
+  console.log('Handle facDataRsp: ', packet);
+
+  //
+  // Unpack envelop
+  //
+  const facdataRsp = factory_data_schema.FacdataRsp.deserializeBinary(packet);
+  msgType = facdataRsp.getMsgtype();
+  errCode  = facdataRsp.getErrcode();
+  errMsg  = facdataRsp.getErrmsg();
+
+  if (errCode) {
+      console.log("Facdata error: errcode/msg:", errCode, errMsg);
+      return;
+  }
+
+  switch(msgType) {
+      case factory_data_schema.FacdataMsgType.GETLINESTYPE:
+
+          const rspGetLines = facdataRsp.getRspgetlines();
+          lines = rspGetLines.getLines();
+
+          myProductionLines = JSON.parse(lines);
+          console.log("Production lines:", myProductionLines);
+          break;
+
+      case factory_data_schema.FacdataMsgType.GETMACHINESTYPE:
+
+          const rspGetMachines = facdataRsp.getRspgetmachines();
+          machinesStr = rspGetMachines.getMachines();
+
+          myMachines = JSON.parse(machinesStr);
+          console.log("Production machines:", myMachines);
+          break;
+
+      case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:
+
+          const rspGetLayouts = facdataRsp.getRspgetlayouts();
+          layoutsStr = rspGetLayouts.getLayouts();
+
+          myLayouts = JSON.parse(layoutsStr);
+          console.log("Layouts:", myLayouts);
+          lastFacDataReceived();  // very dirty for now....assume this is last response and release promise above TBD!
+          break;
+
+      default:
+          console.log("Unknown facdata message type received:", msgType);
+      break;
+  }
+
+};
+
+///////////////////////////////////////////////////////////////////////
 
 const gQlServer = new GraphQLServer({
   typeDefs,
@@ -717,16 +800,39 @@ function sleep(millis) {
 async function main() {
   gQlServer.start(() => console.log(`Server is running on http://localhost:4000`))
 
-  //
-  // Wait for data connection is ready, then init my factory data
-  //
-  factory = await initialize();
-  myMachines = factory.myMachines;
-  myProductionLines = factory.myProductionLines;
-  myLayouts = factory.myLayouts;
-
   // Give node some time to connect amqp
   await sleep(200);
+
+  //
+  // Get factory configuration to know what machines to connect.
+  //
+  factory = await fetchFactoryData();
+
+  //
+  // Now ok to start receiving status updates
+  //
+  amqpConnection.createChannel(function(error1, channel) {
+    if (error1) { throw error1; }
+
+    var exchange = 'topic_ppMachines';
+    channel.assertExchange(exchange, 'topic', {
+      durable: false
+    });
+  
+    channel.assertQueue('', {
+      exclusive: true
+    }, function(error2, q) {
+      if (error2) { throw error2; }
+  
+      channel.bindQueue(q.queue, exchange, "#");
+  
+      channel.consume(q.queue, 
+        handleStatusUpdates, 
+        { noAck: true }
+      );
+    }); 
+  })
+  await sleep(200); // give channel some time to start before start requestiong data..
 
   // 
   // To know what machines that are currently up: Try refresh connection status for all expected machines
