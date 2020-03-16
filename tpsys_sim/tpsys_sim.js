@@ -46,15 +46,15 @@ amqp.connect('amqp://localhost', function(error0, connection) {
 });
 
 function emitProductionEngineStatus() {
-    var key = machineId + '.ProductionEngine';
+    var key = "factory.PnP.Machines." + machineId + '.ProductionEngine';
     subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
 }
 function emitNotificationStatus() {
-    var key = machineId + '.Notifications';
+    var key = "factory.PnP.Machines." + machineId + '.Notifications';
     subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
 }
 function emitMagasineStatus() {
-    var key = machineId + '.ComponentLoading';
+    var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
     subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
 }
 

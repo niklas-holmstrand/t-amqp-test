@@ -1,8 +1,10 @@
 
 # Simulation of tpsys and stack up to GraphQL and react app
 
+Make sure proto compiler, protoc, is install and compile proto-files
+./build.sh
 
-If not done already, install needed packages:
+If not done already, install needed node packages
 npm install
 cd frontend/tpsys_tiny
 npm install

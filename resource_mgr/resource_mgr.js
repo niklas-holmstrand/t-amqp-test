@@ -78,7 +78,7 @@ var myStatus = {
 emitStatus = function() {
     console.log('emit status:', machineId, myStatus);
 
-    var key = machineId + '.ResourceState';
+    var key = "factory.PnP.Machines." + machineId + '.Availability';
     subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myStatus)));
 }
 setTimeout(emitStatus, 100); // send fresh status at start

@@ -43,25 +43,25 @@ amqp.connect('amqp://localhost', (err,conn) => {
 
 function handleStatusUpdates(msg) {
     topic = msg.fields.routingKey.split(".");
-    machineId = topic[0];
-    rootTopic = topic[1]
+    machineId = topic[3];
+    machineTopic = topic[4]
     recState = JSON.parse(msg.content.toString());
-    //console.log("Handle status update", machineId, rootTopic, recState);
+    //console.log("Handle status update", machineId, machineTopic, recState);
     detectedMachines[machineId] = true;
   
-    if (rootTopic == "ResourceState") {
+    if (machineTopic == "ResourceState") {
         resoruceStateCashe[machineId] = recState; 
     }
   
-    if (rootTopic == "ProductionEngine") {
+    if (machineTopic == "ProductionEngine") {
         productionEnginesCashe[machineId] = recState; 
     }
   
-    if (rootTopic == "Notifications") {
+    if (machineTopic == "Notifications") {
         notificationStatusCashe[machineId] = recState; 
     }
   
-    if (rootTopic == "ComponentLoading") {
+    if (machineTopic == "ComponentLoading") {
         magazineStatusCashe[machineId] = recState; 
     }
   

@@ -43,22 +43,22 @@ amqp.connect('amqp://localhost', (err,conn) => {
 
 function handleStatusUpdates(msg) {
   topic = msg.fields.routingKey.split(".");
-  machineId = topic[0];
-  rootTopic = topic[1]
+  machineId = topic[3];
+  machineTopic = topic[4]
   recState = JSON.parse(msg.content.toString());
-  //console.log("Handle status update", machineId, rootTopic, recState);
+  //console.log("Handle status update", machineId, machineTopic, recState);
 
   // find in myMachines
   // If different update status & actions
   i = myMachines.findIndex(m => m.id == machineId);
   if(i == -1) {
     //console.log('myMachines:', myMachines);
-    console.log('Got status from unknown machine!', machineId, rootTopic, recState);
+    console.log('Got status from unknown machine!', machineId, machineTopic, recState);
     return;
   }
 
 
-  if (rootTopic == "ResourceState") {
+  if (machineTopic == "Availability") {
     console.log("Got ResourceState machineId", machineId);
     if(myMachines[i].connected != recState.resourceConnected) {
       myMachines[i].connected = recState.resourceConnected;
@@ -67,17 +67,17 @@ function handleStatusUpdates(msg) {
     }
   }
 
-  if (rootTopic == "ProductionEngine") {
+  if (machineTopic == "ProductionEngine") {
     updateStatusCashe(machineId, productionEnginesCashe, recState);
     pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
   }
 
-  if (rootTopic == "Notifications") {
+  if (machineTopic == "Notifications") {
     updateStatusCashe(machineId, notificationStatusCashe, recState);
     pubsub.publish(NotStatusChanged_TOPIC + machineId, {notifications: recState});
   }
 
-  if (rootTopic == "ComponentLoading") {
+  if (machineTopic == "ComponentLoading") {
     console.log('Magazine status recieved:', machineId, recState);
     updateStatusCashe(machineId, magazineStatusCashe, recState);
     pubsub.publish(MagStatusChanged_TOPIC + machineId, {magazineStatus: recState});
@@ -824,7 +824,7 @@ async function main() {
     }, function(error2, q) {
       if (error2) { throw error2; }
   
-      channel.bindQueue(q.queue, exchange, "#");
+      channel.bindQueue(q.queue, exchange, "factory.PnP.Machines.#");
   
       channel.consume(q.queue, 
         handleStatusUpdates, 
