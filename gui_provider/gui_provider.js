@@ -6,6 +6,28 @@ const {GraphQLServer} = require('graphql-yoga')
 // const {grpcConnections, connectMachines} = require('./grpc_client')
 // const {grpcConnection2} = require('./grpc_client2')
 
+//
+// Mimic old notification struct form data_provision time. TBD cleanup!
+//
+function getNotState(machineId) {
+  
+  casheRecord = notificationStatusCashe.find(r => r.id == machineId); 
+  if (casheRecord)  {
+    notVector = casheRecord.state; 
+  }
+
+  if (!notVector) {
+    notVector = [];
+  }
+
+console.log("##### mid, nvect:", machineId, notVector);
+
+  const notificationsState = {notifications: notVector};
+  return notificationsState;
+}
+
+
+
 const {typeDefs} = require('./graphql_schema')
 
 
@@ -74,7 +96,14 @@ function handleStatusUpdates(msg) {
 
   if (machineTopic == "Notifications") {
     updateStatusCashe(machineId, notificationStatusCashe, recState);
-    pubsub.publish(NotStatusChanged_TOPIC + machineId, {notifications: recState});
+    pubsub.publish(NotStatusChanged_TOPIC + machineId, {notificationStatus: recState});
+
+    // old dirty TBD. Internally publish complete notification list
+    allNotifications = [];
+    notificationStatusCashe.forEach( r => {
+      allNotifications = allNotifications.concat(r.state);
+    } )
+    pubsub.publish(NotStatusChanged_TOPIC, {notifications: allNotifications}) 
   }
 
   if (machineTopic == "ComponentLoading") {
@@ -427,16 +456,16 @@ const resolvers = {
     magazineStatus: (root, args) => {
       return getCashedStatus(args.machineId, magazineStatusCashe);
     },
-    // notificationStatus: (root, args) => {
-    //   const notificationsState = getNotState(args.machineId)
-    //   if (!_.isEmpty(notificationsState)) {
-    //     const machine = _.find(myMachines, m => m.id === args.machineId)
-    //     return addMachineInfo(_.cloneDeep(notificationsState.notifications), machine)
-    //   }
+    notificationStatus: (root, args) => {
+    const notificationsState = getNotState(args.machineId)
+    if (!_.isEmpty(notificationsState)) {
+        const machine = _.find(myMachines, m => m.id === args.machineId)
+        return addMachineInfo(_.cloneDeep(notificationsState.notifications), machine)
+      }
 
-    //   return []
-    // },
-    // notifications: () => getNotifications(),
+      return []
+    },
+    notifications: () => getNotifications(),
     productionLines: () => myProductionLines,
     productionLine: (root, args) => {
       return _.find(myProductionLines, l => {
@@ -609,12 +638,12 @@ const resolvers = {
     magazineStatus: {
       subscribe: (root, args) => pubsub.asyncIterator(MagStatusChanged_TOPIC + args.machineId),
     },
-    // notificationStatus: {
-    //   subscribe: (root, args) => pubsub.asyncIterator(NotStatusChanged_TOPIC + args.machineId),
-    // },
-    // notifications: {
-    //   subscribe: () => pubsub.asyncIterator(NotStatusChanged_TOPIC),
-    // },
+    notificationStatus: {
+      subscribe: (root, args) => pubsub.asyncIterator(NotStatusChanged_TOPIC + args.machineId),
+    },
+    notifications: {
+      subscribe: () => pubsub.asyncIterator(NotStatusChanged_TOPIC),
+    },
     machines: {
       subscribe: () => pubsub.asyncIterator(MachineConnectionStatusChanged_TOPIC),
     },

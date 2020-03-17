@@ -1,6 +1,7 @@
 // State hierarchy:
 //
-// factory.PnP.Machines.<SNR>.Availability.<data>
+// factory.PnP.Machines.<SNR>.Meta
+//                            Availability.<data>
 //                            ProductionEngine.<data>
 //                            ----------------  = Atom 
 //                            ComponentLoading
@@ -12,6 +13,13 @@
 //
 // Content of atomic nodes:
 //
+// var Meta = {  
+//    name: 'Odense',
+//    hostname: 'localhost:50009',
+//    placeInLine: 1,
+//    model: 'My300EX',
+// };
+
 // var availability = {
 //     resMgrRunning: true,
 //     resourceConnected: false,

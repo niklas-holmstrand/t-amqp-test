@@ -6,6 +6,16 @@
 # Start message broker unless already started
 ./start_mq.sh
 
+# IF successful, assume no broker was running. Give it some time so start
+if [ $? = 0 ]; then
+    echo "Waiting for broker to start..."
+    sleep 15
+    echo "... done. Start components..."
+fi
+
+
+
+
 
 # Start factory configuration datasource
 gnome-terminal --tab -- start_scripts/run_facdata.sh

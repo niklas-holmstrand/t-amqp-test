@@ -120,7 +120,7 @@ function presentStatus() {
     presentProp("Comps per board:", 'ProductionEngine', "componentsPerBoard");
     presentProp("Components missing:", 'ProductionEngine', "componentsMissing");
 
-    for (magIx = 0; magIx < 8; magIx++) {
+    for (magIx = 0; magIx < 4; magIx++) {
 
       s1 = s2 = sprintf('%20s', " ")
       myStatusCache['factory']['PnP']['Machines'].forEach((val, i) => {
@@ -137,7 +137,21 @@ function presentStatus() {
       console.log(s1);
       console.log(s2);
   }
-}
+
+  console.log();
+  s = sprintf('%-10s%-20s%-35s%-20s', "Machine", "Severity", "Notification", "OptData")
+  console.log(s);
+
+  myStatusCache['factory']['PnP']['Machines'].forEach((m, machineId) => {
+      myStatusCache['factory']['PnP']['Machines'][machineId]['Notifications'].forEach( (n, nIx) => {
+
+        s = sprintf('%-10s%-20s%-35s%-20s', m.Meta.name, n.severity, n.type, n.runtimeData);
+        console.log(s);
+      });
+    });
+  }
+
+
 
 ///////////////////////////////////////////////////
 //
@@ -179,7 +193,7 @@ function initStatusCache(machines) {
     myStatusCache['factory']['PnP']['Machines'][m.id]['Availability'] = defaultAv;
     myStatusCache['factory']['PnP']['Machines'][m.id]['ProductionEngine'] = defaultPe;
     myStatusCache['factory']['PnP']['Machines'][m.id]['ComponentLoading'] = {};
-    myStatusCache['factory']['PnP']['Machines'][m.id]['Notifications'] = {};
+    myStatusCache['factory']['PnP']['Machines'][m.id]['Notifications'] = [];
    });
 
    presentStatus();
@@ -276,7 +290,7 @@ handleAmqpResponse = function(packet) {
 
           errCode  = rspSendRequest.getErrcode();
           errMsg  = rspSendRequest.getErrmsg();
-          console.log("Got resp to SendRequest, errcode/msg:", errCode, errMsg);
+          //console.log("Got resp to SendRequest, errcode/msg:", errCode, errMsg);
 
           if (errCode) {
               console.log("Resource mgr error: errcode/msg:", errCode, errMsg);
@@ -291,7 +305,7 @@ handleAmqpResponse = function(packet) {
 
           const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(r_bytes);
           tpcpRspType = tpcpRsp.getMsgtype();
-          console.log("Got tpcp message of type:", tpcpRspType);
+          //console.log("Got tpcp message of type:", tpcpRspType);
 
 
           switch(tpcpRspType) {
