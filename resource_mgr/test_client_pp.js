@@ -170,6 +170,17 @@ handleResponse = function(packet) {
                     }
                     console.log("SubsNotificationStatus ok");
                     break;
+
+                case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:
+                    const rspNqrLoadBoard = tpcpRsp.getRspnqrloadboard();
+
+                    if(rspNqrLoadBoard.getErrcode()) {
+                        console.log("NqrLoadBoard - error, errCode/errMsg:", rspNqrLoadBoard.getErrcode(), rspNqrLoadBoard.getErrmsg())
+                        process.exit(0);
+                    }
+                    console.log("rspNqrLoadBoard ok");
+                    break;
+    
     
         
                 default:
@@ -375,21 +386,21 @@ function main() {
 
 
 
-//     if (cmd === 'rspLoadBoard') {
-//         ok = true;
-//         //console.log(process.argv.length, process.argv);
-//         //console.log(process.argv.length >= 5, process.argv[4] === 'N');
-//         if (process.argv.length >= 5 && process.argv[4] === 'N') {
-//             ok = false;
-//         } 
-//         console.log(ok ? 'Confirming board loaded...' : 'No board loaded, pause...');
-//         client.cmdNqrLoadBoard({ok: ok}, function (err, response) {
-//             if (response && response.errCode != 0) {
-//                 console.log('Failed: ' + response.errMsg);
-//             }
-//         });
-//         return;
-//     }
+    if (cmd === 'rspLoadBoard') {
+        ok = true;
+        //console.log(process.argv.length, process.argv);
+        //console.log(process.argv.length >= 5, process.argv[4] === 'N');
+        if (process.argv.length >= 5 && process.argv[4] === 'N') {
+            ok = false;
+        } 
+        console.log(ok ? 'Confirming board loaded...' : 'No board loaded, pause...');
+
+        const cmdNqrLoadBoard = new tpcp_schema.CmdNqrLoadBoard();
+        cmdNqrLoadBoard.setOk(ok);
+
+        tpcpCmd.setCmdnqrloadboard(cmdNqrLoadBoard);
+        tpcpCmd.setMsgtype(tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE);
+    }
 
 //     if (cmd === 'rspRemoveBoard') {
 //         console.log('Confirming board removed...');

@@ -2324,7 +2324,7 @@ proto.tpcp0.Dummy.prototype.setN = function(value) {
  * @private {!Array<!Array<number>>}
  * @const
  */
-proto.tpcp0.TpcpCmd.oneofGroups_ = [[2,3,4,5,6,7,8,9,10]];
+proto.tpcp0.TpcpCmd.oneofGroups_ = [[2,3,4,5,6,7,8,9,10,12,13,14]];
 
 /**
  * @enum {number}
@@ -2339,7 +2339,10 @@ proto.tpcp0.TpcpCmd.PayloadCase = {
   CMDGETPRODUCTIONENGINESTATUS: 7,
   CMDSUBSPE: 8,
   CMDSUBSMAGAZINESTATUS: 9,
-  CMDSUBSNOTIFICATIONSTATUS: 10
+  CMDSUBSNOTIFICATIONSTATUS: 10,
+  CMDNQRLOADBOARD: 12,
+  CMDNQRREMOVEBOARD: 13,
+  CMDNQRUNLOADANYLOADEDBOARD: 14
 };
 
 /**
@@ -2389,7 +2392,10 @@ proto.tpcp0.TpcpCmd.toObject = function(includeInstance, msg) {
     cmdgetproductionenginestatus: (f = msg.getCmdgetproductionenginestatus()) && proto.tpcp0.CmdGetProductionEngineStatus.toObject(includeInstance, f),
     cmdsubspe: (f = msg.getCmdsubspe()) && proto.tpcp0.CmdSubsPe.toObject(includeInstance, f),
     cmdsubsmagazinestatus: (f = msg.getCmdsubsmagazinestatus()) && proto.tpcp0.CmdSubsMagazineStatus.toObject(includeInstance, f),
-    cmdsubsnotificationstatus: (f = msg.getCmdsubsnotificationstatus()) && proto.tpcp0.CmdSubsNotificationStatus.toObject(includeInstance, f)
+    cmdsubsnotificationstatus: (f = msg.getCmdsubsnotificationstatus()) && proto.tpcp0.CmdSubsNotificationStatus.toObject(includeInstance, f),
+    cmdnqrloadboard: (f = msg.getCmdnqrloadboard()) && proto.tpcp0.CmdNqrLoadBoard.toObject(includeInstance, f),
+    cmdnqrremoveboard: (f = msg.getCmdnqrremoveboard()) && proto.tpcp0.CmdNqrRemoveBoard.toObject(includeInstance, f),
+    cmdnqrunloadanyloadedboard: (f = msg.getCmdnqrunloadanyloadedboard()) && proto.tpcp0.CmdNqrUnloadAnyLoadedBoard.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -2474,6 +2480,21 @@ proto.tpcp0.TpcpCmd.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.tpcp0.CmdSubsNotificationStatus;
       reader.readMessage(value,proto.tpcp0.CmdSubsNotificationStatus.deserializeBinaryFromReader);
       msg.setCmdsubsnotificationstatus(value);
+      break;
+    case 12:
+      var value = new proto.tpcp0.CmdNqrLoadBoard;
+      reader.readMessage(value,proto.tpcp0.CmdNqrLoadBoard.deserializeBinaryFromReader);
+      msg.setCmdnqrloadboard(value);
+      break;
+    case 13:
+      var value = new proto.tpcp0.CmdNqrRemoveBoard;
+      reader.readMessage(value,proto.tpcp0.CmdNqrRemoveBoard.deserializeBinaryFromReader);
+      msg.setCmdnqrremoveboard(value);
+      break;
+    case 14:
+      var value = new proto.tpcp0.CmdNqrUnloadAnyLoadedBoard;
+      reader.readMessage(value,proto.tpcp0.CmdNqrUnloadAnyLoadedBoard.deserializeBinaryFromReader);
+      msg.setCmdnqrunloadanyloadedboard(value);
       break;
     default:
       reader.skipField();
@@ -2581,6 +2602,30 @@ proto.tpcp0.TpcpCmd.serializeBinaryToWriter = function(message, writer) {
       10,
       f,
       proto.tpcp0.CmdSubsNotificationStatus.serializeBinaryToWriter
+    );
+  }
+  f = message.getCmdnqrloadboard();
+  if (f != null) {
+    writer.writeMessage(
+      12,
+      f,
+      proto.tpcp0.CmdNqrLoadBoard.serializeBinaryToWriter
+    );
+  }
+  f = message.getCmdnqrremoveboard();
+  if (f != null) {
+    writer.writeMessage(
+      13,
+      f,
+      proto.tpcp0.CmdNqrRemoveBoard.serializeBinaryToWriter
+    );
+  }
+  f = message.getCmdnqrunloadanyloadedboard();
+  if (f != null) {
+    writer.writeMessage(
+      14,
+      f,
+      proto.tpcp0.CmdNqrUnloadAnyLoadedBoard.serializeBinaryToWriter
     );
   }
 };
@@ -2937,6 +2982,117 @@ proto.tpcp0.TpcpCmd.prototype.hasCmdsubsnotificationstatus = function() {
 };
 
 
+/**
+ * optional CmdNqrLoadBoard cmdNqrLoadBoard = 12;
+ * @return {?proto.tpcp0.CmdNqrLoadBoard}
+ */
+proto.tpcp0.TpcpCmd.prototype.getCmdnqrloadboard = function() {
+  return /** @type{?proto.tpcp0.CmdNqrLoadBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.CmdNqrLoadBoard, 12));
+};
+
+
+/**
+ * @param {?proto.tpcp0.CmdNqrLoadBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+*/
+proto.tpcp0.TpcpCmd.prototype.setCmdnqrloadboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 12, proto.tpcp0.TpcpCmd.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+ */
+proto.tpcp0.TpcpCmd.prototype.clearCmdnqrloadboard = function() {
+  return this.setCmdnqrloadboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpCmd.prototype.hasCmdnqrloadboard = function() {
+  return jspb.Message.getField(this, 12) != null;
+};
+
+
+/**
+ * optional CmdNqrRemoveBoard cmdNqrRemoveBoard = 13;
+ * @return {?proto.tpcp0.CmdNqrRemoveBoard}
+ */
+proto.tpcp0.TpcpCmd.prototype.getCmdnqrremoveboard = function() {
+  return /** @type{?proto.tpcp0.CmdNqrRemoveBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.CmdNqrRemoveBoard, 13));
+};
+
+
+/**
+ * @param {?proto.tpcp0.CmdNqrRemoveBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+*/
+proto.tpcp0.TpcpCmd.prototype.setCmdnqrremoveboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 13, proto.tpcp0.TpcpCmd.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+ */
+proto.tpcp0.TpcpCmd.prototype.clearCmdnqrremoveboard = function() {
+  return this.setCmdnqrremoveboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpCmd.prototype.hasCmdnqrremoveboard = function() {
+  return jspb.Message.getField(this, 13) != null;
+};
+
+
+/**
+ * optional CmdNqrUnloadAnyLoadedBoard cmdNqrUnloadAnyLoadedBoard = 14;
+ * @return {?proto.tpcp0.CmdNqrUnloadAnyLoadedBoard}
+ */
+proto.tpcp0.TpcpCmd.prototype.getCmdnqrunloadanyloadedboard = function() {
+  return /** @type{?proto.tpcp0.CmdNqrUnloadAnyLoadedBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.CmdNqrUnloadAnyLoadedBoard, 14));
+};
+
+
+/**
+ * @param {?proto.tpcp0.CmdNqrUnloadAnyLoadedBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+*/
+proto.tpcp0.TpcpCmd.prototype.setCmdnqrunloadanyloadedboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 14, proto.tpcp0.TpcpCmd.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpCmd} returns this
+ */
+proto.tpcp0.TpcpCmd.prototype.clearCmdnqrunloadanyloadedboard = function() {
+  return this.setCmdnqrunloadanyloadedboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpCmd.prototype.hasCmdnqrunloadanyloadedboard = function() {
+  return jspb.Message.getField(this, 14) != null;
+};
+
+
 
 /**
  * Oneof group definitions for this message. Each group defines the field
@@ -2946,7 +3102,7 @@ proto.tpcp0.TpcpCmd.prototype.hasCmdsubsnotificationstatus = function() {
  * @private {!Array<!Array<number>>}
  * @const
  */
-proto.tpcp0.TpcpRsp.oneofGroups_ = [[2,3,4,5,6,7,8,9,10]];
+proto.tpcp0.TpcpRsp.oneofGroups_ = [[2,3,4,5,6,7,8,9,10,12,13,14]];
 
 /**
  * @enum {number}
@@ -2961,7 +3117,10 @@ proto.tpcp0.TpcpRsp.PayloadCase = {
   RSPGETPRODUCTIONENGINESTATUS: 7,
   RSPSUBSPE: 8,
   RSPSUBSMAGAZINESTATUS: 9,
-  RSPSUBSNOTIFICATIONSTATUS: 10
+  RSPSUBSNOTIFICATIONSTATUS: 10,
+  RSPNQRLOADBOARD: 12,
+  RSPNQRREMOVEBOARD: 13,
+  RSPNQRUNLOADANYLOADEDBOARD: 14
 };
 
 /**
@@ -3011,7 +3170,10 @@ proto.tpcp0.TpcpRsp.toObject = function(includeInstance, msg) {
     rspgetproductionenginestatus: (f = msg.getRspgetproductionenginestatus()) && proto.tpcp0.RspGetProductionEngineStatus.toObject(includeInstance, f),
     rspsubspe: (f = msg.getRspsubspe()) && proto.tpcp0.RspSubsPe.toObject(includeInstance, f),
     rspsubsmagazinestatus: (f = msg.getRspsubsmagazinestatus()) && proto.tpcp0.RspSubsMagazineStatus.toObject(includeInstance, f),
-    rspsubsnotificationstatus: (f = msg.getRspsubsnotificationstatus()) && proto.tpcp0.RspSubsNotificationStatus.toObject(includeInstance, f)
+    rspsubsnotificationstatus: (f = msg.getRspsubsnotificationstatus()) && proto.tpcp0.RspSubsNotificationStatus.toObject(includeInstance, f),
+    rspnqrloadboard: (f = msg.getRspnqrloadboard()) && proto.tpcp0.RspNqrLoadBoard.toObject(includeInstance, f),
+    rspnqrremoveboard: (f = msg.getRspnqrremoveboard()) && proto.tpcp0.RspNqrRemoveBoard.toObject(includeInstance, f),
+    rspnqrunloadanyloadedboard: (f = msg.getRspnqrunloadanyloadedboard()) && proto.tpcp0.RspNqrUnloadAnyLoadedBoard.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -3096,6 +3258,21 @@ proto.tpcp0.TpcpRsp.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.tpcp0.RspSubsNotificationStatus;
       reader.readMessage(value,proto.tpcp0.RspSubsNotificationStatus.deserializeBinaryFromReader);
       msg.setRspsubsnotificationstatus(value);
+      break;
+    case 12:
+      var value = new proto.tpcp0.RspNqrLoadBoard;
+      reader.readMessage(value,proto.tpcp0.RspNqrLoadBoard.deserializeBinaryFromReader);
+      msg.setRspnqrloadboard(value);
+      break;
+    case 13:
+      var value = new proto.tpcp0.RspNqrRemoveBoard;
+      reader.readMessage(value,proto.tpcp0.RspNqrRemoveBoard.deserializeBinaryFromReader);
+      msg.setRspnqrremoveboard(value);
+      break;
+    case 14:
+      var value = new proto.tpcp0.RspNqrUnloadAnyLoadedBoard;
+      reader.readMessage(value,proto.tpcp0.RspNqrUnloadAnyLoadedBoard.deserializeBinaryFromReader);
+      msg.setRspnqrunloadanyloadedboard(value);
       break;
     default:
       reader.skipField();
@@ -3203,6 +3380,30 @@ proto.tpcp0.TpcpRsp.serializeBinaryToWriter = function(message, writer) {
       10,
       f,
       proto.tpcp0.RspSubsNotificationStatus.serializeBinaryToWriter
+    );
+  }
+  f = message.getRspnqrloadboard();
+  if (f != null) {
+    writer.writeMessage(
+      12,
+      f,
+      proto.tpcp0.RspNqrLoadBoard.serializeBinaryToWriter
+    );
+  }
+  f = message.getRspnqrremoveboard();
+  if (f != null) {
+    writer.writeMessage(
+      13,
+      f,
+      proto.tpcp0.RspNqrRemoveBoard.serializeBinaryToWriter
+    );
+  }
+  f = message.getRspnqrunloadanyloadedboard();
+  if (f != null) {
+    writer.writeMessage(
+      14,
+      f,
+      proto.tpcp0.RspNqrUnloadAnyLoadedBoard.serializeBinaryToWriter
     );
   }
 };
@@ -3556,6 +3757,117 @@ proto.tpcp0.TpcpRsp.prototype.clearRspsubsnotificationstatus = function() {
  */
 proto.tpcp0.TpcpRsp.prototype.hasRspsubsnotificationstatus = function() {
   return jspb.Message.getField(this, 10) != null;
+};
+
+
+/**
+ * optional RspNqrLoadBoard rspNqrLoadBoard = 12;
+ * @return {?proto.tpcp0.RspNqrLoadBoard}
+ */
+proto.tpcp0.TpcpRsp.prototype.getRspnqrloadboard = function() {
+  return /** @type{?proto.tpcp0.RspNqrLoadBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.RspNqrLoadBoard, 12));
+};
+
+
+/**
+ * @param {?proto.tpcp0.RspNqrLoadBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+*/
+proto.tpcp0.TpcpRsp.prototype.setRspnqrloadboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 12, proto.tpcp0.TpcpRsp.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+ */
+proto.tpcp0.TpcpRsp.prototype.clearRspnqrloadboard = function() {
+  return this.setRspnqrloadboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpRsp.prototype.hasRspnqrloadboard = function() {
+  return jspb.Message.getField(this, 12) != null;
+};
+
+
+/**
+ * optional RspNqrRemoveBoard rspNqrRemoveBoard = 13;
+ * @return {?proto.tpcp0.RspNqrRemoveBoard}
+ */
+proto.tpcp0.TpcpRsp.prototype.getRspnqrremoveboard = function() {
+  return /** @type{?proto.tpcp0.RspNqrRemoveBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.RspNqrRemoveBoard, 13));
+};
+
+
+/**
+ * @param {?proto.tpcp0.RspNqrRemoveBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+*/
+proto.tpcp0.TpcpRsp.prototype.setRspnqrremoveboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 13, proto.tpcp0.TpcpRsp.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+ */
+proto.tpcp0.TpcpRsp.prototype.clearRspnqrremoveboard = function() {
+  return this.setRspnqrremoveboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpRsp.prototype.hasRspnqrremoveboard = function() {
+  return jspb.Message.getField(this, 13) != null;
+};
+
+
+/**
+ * optional RspNqrUnloadAnyLoadedBoard rspNqrUnloadAnyLoadedBoard = 14;
+ * @return {?proto.tpcp0.RspNqrUnloadAnyLoadedBoard}
+ */
+proto.tpcp0.TpcpRsp.prototype.getRspnqrunloadanyloadedboard = function() {
+  return /** @type{?proto.tpcp0.RspNqrUnloadAnyLoadedBoard} */ (
+    jspb.Message.getWrapperField(this, proto.tpcp0.RspNqrUnloadAnyLoadedBoard, 14));
+};
+
+
+/**
+ * @param {?proto.tpcp0.RspNqrUnloadAnyLoadedBoard|undefined} value
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+*/
+proto.tpcp0.TpcpRsp.prototype.setRspnqrunloadanyloadedboard = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 14, proto.tpcp0.TpcpRsp.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.tpcp0.TpcpRsp} returns this
+ */
+proto.tpcp0.TpcpRsp.prototype.clearRspnqrunloadanyloadedboard = function() {
+  return this.setRspnqrunloadanyloadedboard(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.tpcp0.TpcpRsp.prototype.hasRspnqrunloadanyloadedboard = function() {
+  return jspb.Message.getField(this, 14) != null;
 };
 
 
@@ -7113,6 +7425,9 @@ proto.tpcp0.TpcpMsgType = {
   SUBSPETYPE: 8,
   SUBSMAGAZINESTATUSTYPE: 9,
   SUBSNOTIFICATIONSTATUSTYPE: 10,
+  NQRLOADBOARDTYPE: 12,
+  NQRREMOVEBOARDTYPE: 13,
+  NQRUNLOADANYLOADEDBOARDTYPE: 14,
   NOTYPE: 99999
 };
 

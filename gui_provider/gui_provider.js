@@ -20,8 +20,6 @@ function getNotState(machineId) {
     notVector = [];
   }
 
-console.log("##### mid, nvect:", machineId, notVector);
-
   const notificationsState = {notifications: notVector};
   return notificationsState;
 }
@@ -293,8 +291,11 @@ function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
       case tpcp_schema.TpcpMsgType.STOPTYPE:          tpcpCmd.setCmdstop(tpcpCmdMsg);         break;
       case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:    tpcpCmd.setCmdstartbatch(tpcpCmdMsg);   break;
       case tpcp_schema.TpcpMsgType.SUBSPETYPE:        tpcpCmd.setCmdsubspe(tpcpCmdMsg);       break;
-      case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:       tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:       tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:        tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:    tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:              tpcpCmd.setCmdnqrloadboard(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRREMOVEBOARDTYPE:            tpcpCmd.setCmdnqrremoveboard(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRUNLOADANYLOADEDBOARDTYPE:   tpcpCmd.setCmdunloadanyloadedboard(tpcpCmdMsg);        break;
 
       default: console.log('Unknown tpcp cmd type: ', tpcpType); return;
     }
@@ -411,7 +412,24 @@ handleAmqpResponse = function(packet) {
               cmdPromiseTrigger = null;
               break;
             
+            case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:
+              const rspNqrLoadBoard = tpcpRsp.getRspnqrloadboard();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspNqrLoadBoard) }
+              cmdPromiseTrigger = null;
+              break;
 
+            case tpcp_schema.TpcpMsgType.NQRREMOVEBOARDTYPE:
+              const rspNqrRemoveBoard = tpcpRsp.getRspnqrremoveboard();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspNqrRemoveBoard) }
+              cmdPromiseTrigger = null;
+              break;
+
+            case tpcp_schema.TpcpMsgType.NQRUNLOADANYLOADEDBOARDTYPE:
+              const rspNqrUnloadAnyLoadedBoard = tpcpRsp.getRspnqrunloadanyloadedboard();
+              if(cmdPromiseTrigger) { cmdPromiseTrigger(rspNqrUnloadAnyLoadedBoard) }
+              cmdPromiseTrigger = null;
+              break;
+               
             default: console.log('Unknown tpcp type on rsp: ', tpcpRspType); return;
           }
       break;
@@ -515,6 +533,36 @@ const resolvers = {
       cmdStartBatch.setBatchsize(args.batchSize);
 
       gqlRes = sendCmdWaitRspToGql(cmdStartBatch, tpcp_schema.TpcpMsgType.STARTBATCHTYPE, args.machineId, "startBatch");
+      await gqlRes;
+
+      return gqlRes
+    },
+
+    NQR_LoadBoard: async (root, args) => {
+      const cmdNqrLoadBoard = new tpcp_schema.CmdNqrLoadBoard();
+      cmdNqrLoadBoard.setOk(args.ok);
+
+      gqlRes = sendCmdWaitRspToGql(cmdNqrLoadBoard, tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE, args.machineId, "NQRLoadBoard");
+      await gqlRes;
+
+      return gqlRes
+    },
+
+    NQR_RemoveBoard: async (root, args) => {
+      const cmdNqrRemoveBoard = new tpcp_schema.CmdNqrRemoveBoard();
+
+      gqlRes = sendCmdWaitRspToGql(cmdNqrRemoveBoard, tpcp_schema.TpcpMsgType.NQRREMOVEBOARDTYPE, args.machineId, "NQRRemoveBoard");
+      await gqlRes;
+
+      return gqlRes
+    },
+
+    NQR_UnloadAnyLoadedBoard: async (root, args) => {
+      const cmdNqrUnloadAnyLoadedBoard = new tpcp_schema.CmdNqrUnloadAnyLoadedBoard();
+      cmdNqrUnloadAnyLoadedBoard.setOk( args.ok );
+      cmdNqrUnloadAnyLoadedBoard.setBoardtounloadexists( args.boardToUnloadExists );
+
+      gqlRes = sendCmdWaitRspToGql(cmdNqrUnloadAnyLoadedBoard, tpcp_schema.TpcpMsgType.NQRUNLOADANYLOADEDBOARDTYPE, args.machineId, "NQRUnloadAnyLoadedBoard");
       await gqlRes;
 
       return gqlRes

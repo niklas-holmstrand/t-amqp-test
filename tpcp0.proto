@@ -204,7 +204,10 @@ enum TpcpMsgType {
   SubsPeType = 8;
   SubsMagazineStatusType = 9;
   SubsNotificationStatusType = 10;
-//  UpdateStatusType = 11;
+  //  UpdateStatusType = 11;
+  NqrLoadBoardType = 12;
+  NqrRemoveBoardType = 13;
+  NqrUnloadAnyLoadedBoardType = 14;
   
   NoType = 99999;
 }
@@ -223,7 +226,9 @@ message TpcpCmd {
     CmdSubsMagazineStatus cmdSubsMagazineStatus = 9;  
     CmdSubsNotificationStatus cmdSubsNotificationStatus = 10;  
 //    CmdUpdateStatus cmdUpdateStatus = 11;  
-    
+    CmdNqrLoadBoard cmdNqrLoadBoard = 12;
+    CmdNqrRemoveBoard cmdNqrRemoveBoard = 13;
+    CmdNqrUnloadAnyLoadedBoard cmdNqrUnloadAnyLoadedBoard = 14;
   }
 }
 
@@ -241,6 +246,9 @@ message TpcpRsp {
     RspSubsMagazineStatus rspSubsMagazineStatus = 9;  
     RspSubsNotificationStatus rspSubsNotificationStatus = 10;  
 //    RspUpdateStatus rspUpdateStatus = 11;  
+    RspNqrLoadBoard rspNqrLoadBoard = 12;
+    RspNqrRemoveBoard rspNqrRemoveBoard = 13;
+    RspNqrUnloadAnyLoadedBoard rspNqrUnloadAnyLoadedBoard = 14;
   }
 }
 

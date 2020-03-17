@@ -192,7 +192,13 @@ function handleCmd(call, callback) {
             tpcpRsp.setRspsubsnotificationstatus(rspSubsNotificationStatus);
             break;
                         
-            default:
+        case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:
+            const cmdNqrLoadBoard = tpcpCmd.getCmdnqrloadboard();
+            rspNqrLoadBoard = handleNqrLoadBoard(cmdNqrLoadBoard);
+            tpcpRsp.setRspnqrloadboard(rspNqrLoadBoard);
+            break;
+                        
+        default:
             console.log("Unknown cmd:", tpcpCmd.getMsgtype());
             process.exit(-1);
     }
@@ -275,7 +281,7 @@ function handlePause(cmdPause) {
     return rspPause;
 }
 
-function handlePlay(call, callback) {
+function handlePlay() {
     const rspPlay = new tpcp_schema.RspPlay();
     rspPlay.setErrcode(-1);
     rspPlay.setErrmsg("NotAssigned");
@@ -294,7 +300,7 @@ function handlePlay(call, callback) {
     return rspPlay;
 }
 
-function handleStop(call, callback) {
+function handleStop() {
     const rspStop = new tpcp_schema.RspStop();
     rspStop.setErrcode(-1);
     rspStop.setErrmsg("NotAssigned");
@@ -316,7 +322,7 @@ function handleStop(call, callback) {
     return rspStop;
 }
 
-function handleSubsPe(call, callback) {
+function handleSubsPe() {
     const rspSubsPe = new tpcp_schema.RspSubsPe();
     rspSubsPe.setErrcode(-1);
     rspSubsPe.setErrmsg("NotAssigned");
@@ -331,7 +337,7 @@ function handleSubsPe(call, callback) {
     return rspSubsPe;
 }
 
-function handleSubsMagazineStatus(call, callback) {
+function handleSubsMagazineStatus() {
     const rspSubsMagazineStatus = new tpcp_schema.RspSubsMagazineStatus();
     rspSubsMagazineStatus.setErrcode(-1);
     rspSubsMagazineStatus.setErrmsg("NotAssigned");
@@ -346,7 +352,7 @@ function handleSubsMagazineStatus(call, callback) {
     return rspSubsMagazineStatus;
 }
 
-function handleSubsNotificationStatus(call, callback) {
+function handleSubsNotificationStatus() {
     const rspSubsNotificationStatus = new tpcp_schema.RspSubsNotificationStatus();
     rspSubsNotificationStatus.setErrcode(-1);
     rspSubsNotificationStatus.setErrmsg("NotAssigned");
@@ -359,6 +365,30 @@ function handleSubsNotificationStatus(call, callback) {
     rspSubsNotificationStatus.setErrcode(0);
     rspSubsNotificationStatus.setErrmsg("ok");
     return rspSubsNotificationStatus;
+}
+
+function handleNqrLoadBoard(cmdNqrLoadBoard) {
+    const rspNqrLoadBoard = new tpcp_schema.RspNqrLoadBoard();
+    rspNqrLoadBoard.setErrcode(-1);
+    rspNqrLoadBoard.setErrmsg("NotAssigned");
+
+
+    console.log("NqrLoadBoard ok:", cmdNqrLoadBoard.getOk());
+    if(waitingForBoard) {
+        waitingForBoard = false;
+        removeNotification(100);
+
+        if(cmdNqrLoadBoard.getOk()) {
+            console.log('Board loaded')
+        } else {
+            console.log('Board not loaded, pause')
+            myProductionEngine.state = 'Paused';
+        }
+    }
+
+    rspNqrLoadBoard.setErrcode(0);
+    rspNqrLoadBoard.setErrmsg("ok");
+    return rspNqrLoadBoard;
 }
 
 
@@ -461,26 +491,6 @@ function handleSubsNotificationStatus(call, callback) {
 //     return callback(null, { errCode: 0, errMsg: '' });
 // }
 
-// function cmdNqrLoadBoard(call, callback) {
-
-//     if(waitingForBoard) {
-//         waitingForBoard = false;
-//         removeNotification(100);
-
-//         if(call.request.ok) {
-//             console.log('Board loaded')
-//         } else {
-//             console.log('Board not loaded, pause')
-//             myProductionEngine.state = 'Paused';
-//         }
-
-//     } else {
-//         console.log('unexpected CmdNqrLoadBoard')
-//         callback(null, { errCode: -1, errMsg: 'Unexpected CmdNqrLoadBoard' });
-//         return;
-//     }
-//     callback(null, { errCode: 0, errMsg: '' });
-// }
 
 
 
