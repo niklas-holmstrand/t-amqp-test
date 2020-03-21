@@ -21,41 +21,37 @@ var packageDefinition = protoLoader.loadSync(
 var myProto = grpc.loadPackageDefinition(packageDefinition).tunnel;
 
 
-////////////////// amqp for subscriptions /////////////////////////
+////////////////// mqtt for subscriptions /////////////////////////
 
-var amqp = require('amqplib/callback_api');
-var subscriptionAmqpChannel
-var exchangeName = 'topic_ppMachines';
-
-amqp.connect('amqp://localhost', function(error0, connection) {
-  if (error0) {
-    throw error0;
-  }
-
-  connection.createChannel(function(error1, channel) {
-    if (error1) {
-      throw error1;
-    }
-    subscriptionAmqpChannel = channel;
-
-    channel.assertExchange(exchangeName, 'topic', {
-      durable: false
-    });
-  });
-
-});
+const mqtt = require('mqtt')
+var mqttClient = null;
 
 function emitProductionEngineStatus() {
-    var key = "factory.PnP.Machines." + machineId + '.ProductionEngine';
-    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
+    var topic = "factory/PnP/Machines/" + machineId + '/State/ProductionEngine';
+    mqttClient.publish( topic, JSON.stringify(myProductionEngine), 
+        {retain: true}, (err) => {
+        if (err) { console.log('tpsys_sim: mqtt publish pe err:', err);} 
+    })
+    //subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
 }
+
 function emitNotificationStatus() {
-    var key = "factory.PnP.Machines." + machineId + '.Notifications';
-    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
+    var topic = "factory/PnP/Machines/" + machineId + '/State/Notifications';
+    mqttClient.publish( topic, JSON.stringify(myNotifications), 
+        {retain: true}, (err) => {
+        if (err) { console.log('tpsys_sim: mqtt publish not err:', err);} 
+    })
+    // var key = "factory.PnP.Machines." + machineId + '.Notifications';
+    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
 }
 function emitMagasineStatus() {
-    var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
-    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
+    var topic = "factory/PnP/Machines/" + machineId + '/State/ComponentLoading';
+    mqttClient.publish( topic, JSON.stringify(myMagSlots), 
+        {retain: true}, (err) => {
+        if (err) { console.log('tpsys_sim: mqtt publish cl err:', err);} 
+    })
+    // var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
+    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
 }
 
 ///////////////////////////////////////////
@@ -780,8 +776,35 @@ function main() {
     if (process.argv.length >= 3) {
         machineId = process.argv[2];
     }
-    portNo = '5000' + machineId;
 
+    //
+    // mqtt connection
+    //
+    const TCP_URL = 'mqtt://localhost:1883'
+    const TCP_TLS_URL = 'mqtts://localhost:8883'
+
+    const options = {
+        connectTimeout: 4000,
+
+        // Authentication
+        clientId: 'PP-machine'+ machineId,
+        // username: 'emqx',
+        // password: 'emqx',
+
+        keepalive: 60,
+        clean: true,
+    }
+
+    mqttClient = mqtt.connect(TCP_URL, options)
+    mqttClient.on('connect', () => {
+        console.log('MQTT connected')
+    })
+  
+
+    //
+    // gRPC connection
+    //
+    portNo = '5000' + machineId;
     var server = new grpc.Server();
     server.addService(myProto.TunnelService.service, {
         message: handleCmd,
@@ -793,7 +816,7 @@ function main() {
     //startImageStream();
 
 
-    console.log("server started, port: ", portNo)
+    console.log("tpsys_sim server started, gRPC port: ", portNo)
     setTimeout(quick, 100);
     setTimeout(startImageStream, 1000);
 }

@@ -251,7 +251,7 @@ proto.resourceMgr.ResmgrCmd.prototype.toObject = function(opt_includeInstance) {
 proto.resourceMgr.ResmgrCmd.toObject = function(includeInstance, msg) {
   var f, obj = {
     msgtype: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    responsequeue: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    responsetopic: jspb.Message.getFieldWithDefault(msg, 2, ""),
     cmdsendrequest: (f = msg.getCmdsendrequest()) && proto.resourceMgr.CmdSendRequest.toObject(includeInstance, f),
     cmdreserveresource: (f = msg.getCmdreserveresource()) && proto.resourceMgr.CmdReserveResource.toObject(includeInstance, f),
     cmdupdatestatus: (f = msg.getCmdupdatestatus()) && proto.resourceMgr.CmdUpdateStatus.toObject(includeInstance, f)
@@ -297,7 +297,7 @@ proto.resourceMgr.ResmgrCmd.deserializeBinaryFromReader = function(msg, reader) 
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
-      msg.setResponsequeue(value);
+      msg.setResponsetopic(value);
       break;
     case 3:
       var value = new proto.resourceMgr.CmdSendRequest;
@@ -350,7 +350,7 @@ proto.resourceMgr.ResmgrCmd.serializeBinaryToWriter = function(message, writer) 
       f
     );
   }
-  f = message.getResponsequeue();
+  f = message.getResponsetopic();
   if (f.length > 0) {
     writer.writeString(
       2,
@@ -403,10 +403,10 @@ proto.resourceMgr.ResmgrCmd.prototype.setMsgtype = function(value) {
 
 
 /**
- * optional string responseQueue = 2;
+ * optional string responseTopic = 2;
  * @return {string}
  */
-proto.resourceMgr.ResmgrCmd.prototype.getResponsequeue = function() {
+proto.resourceMgr.ResmgrCmd.prototype.getResponsetopic = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
@@ -415,7 +415,7 @@ proto.resourceMgr.ResmgrCmd.prototype.getResponsequeue = function() {
  * @param {string} value
  * @return {!proto.resourceMgr.ResmgrCmd} returns this
  */
-proto.resourceMgr.ResmgrCmd.prototype.setResponsequeue = function(value) {
+proto.resourceMgr.ResmgrCmd.prototype.setResponsetopic = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
 };
 

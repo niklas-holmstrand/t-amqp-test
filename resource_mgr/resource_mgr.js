@@ -1,40 +1,4 @@
 machineId = process.argv[2];
-//
-// AMQP stuff
-//
-
-amqp = require("amqplib/callback_api");
-
-var amqpChannel;
-const requestQueue = 'Machine'+ machineId;
-var exchangeName = 'topic_ppMachines';
-var subscriptionAmqpChannel;
-
-amqp.connect('amqp://localhost', (err,conn) => {
-    conn.createChannel((err, ch) => {
-
-        ch.assertQueue(requestQueue);
-        amqpChannel = ch;
-
-        // Setup consumer
-        amqpChannel.consume(requestQueue, (message) => {
-            console.log('Got: message');
-            handleMessage(message.content);
-        }, {noAck: true });
-    });   
-
-    conn.createChannel(function(error1, channel) {
-        if (error1) {
-          throw error1;
-        }
-        subscriptionAmqpChannel = channel;
-    
-        channel.assertExchange(exchangeName, 'topic', {
-          durable: false
-        });
-      });
-    
-});
 
 //
 // gRPC-tunnel stuff
@@ -61,6 +25,41 @@ var tunnel = new tunnel_proto.TunnelService(hostAndPort,
 console.log("tunnel started on:", hostAndPort);
 
 //
+// MQTT stuff
+//
+const mqtt = require('mqtt')
+var mqttClient = null;
+const TCP_URL = 'mqtt://localhost:1883'
+const TCP_TLS_URL = 'mqtts://localhost:8883'
+
+const options = {
+    connectTimeout: 4000,
+
+    // Authentication
+    clientId: 'resmgr'+ machineId,
+    // username: 'emqx',
+    // password: 'emqx',
+
+    keepalive: 60,
+    clean: true,
+}
+
+mqttClient = mqtt.connect(TCP_URL, options)
+mqttClient.on('connect', () => {
+
+    mqttClient.subscribe('factory/PnP/Machines/' + machineId + '/Cmd',(err) => {
+        console.log(err || 'MQTT Subscribe Success')
+      })
+    
+    console.log('MQTT connected')
+})
+
+mqttClient.on('message', (topic, message) => {
+    //console.log('Received topic/message', topic, ':', message.toString())
+    handleMessage(message);
+})
+  
+//
 //
 //
 const pb_schema = require("../resource_mgr_pb");
@@ -78,8 +77,11 @@ var myStatus = {
 emitStatus = function() {
     console.log('emit status:', machineId, myStatus);
 
-    var key = "factory.PnP.Machines." + machineId + '.Availability';
-    subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myStatus)));
+    var topic = "factory/PnP/Machines/" + machineId + '/State/Availability';
+    mqttClient.publish( topic, JSON.stringify(myStatus), 
+        {retain: true}, (err) => {
+        if (err) { console.log('resmgr: mqtt publish err:', err);} 
+    })
 }
 setTimeout(emitStatus, 100); // send fresh status at start
 
@@ -112,11 +114,9 @@ handleMessage = function(msg) {
     //console.log('Handle: ', msg);
 
     const resmgrCmd = pb_schema.ResmgrCmd.deserializeBinary(msg);
-    responseQueue = resmgrCmd.getResponsequeue();
+    responseTopic = resmgrCmd.getResponsetopic();
     resmgrCmdType = resmgrCmd.getMsgtype();
-    console.log('got ResmgrCmd: ', resmgrCmdType, responseQueue);
-
-    amqpChannel.assertQueue(responseQueue);
+    console.log('got ResmgrCmd: ', resmgrCmdType, responseTopic);
 
 
     switch(resmgrCmdType) {
@@ -141,7 +141,7 @@ handleMessage = function(msg) {
             tunnel.message({
                 requestMsg: payloadStr
             }, function (err, response) {
-                console.log("Got response to request", response);
+                //console.log("Got response to request", response);
 
                 if(!response) {
                     console.log("Receied empty response! Ignoring");
@@ -162,8 +162,12 @@ handleMessage = function(msg) {
 
                 const bytes = resmgrRsp.serializeBinary();                
                 packet = Buffer.from(bytes)
-                amqpChannel.sendToQueue(responseQueue, packet);
-                console.log('Sent rspSendRequest to ', responseQueue);
+                mqttClient.publish( responseTopic, packet, 
+                    {retain: false}, (err) => {
+                    if (err) { console.log('resmgr: mqtt publish err:', err);} 
+                })
+
+                console.log('Sent rspSendRequest to ', responseTopic);
             });
             break;
 

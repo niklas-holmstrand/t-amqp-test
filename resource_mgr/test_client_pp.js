@@ -6,28 +6,64 @@ const tpcp_schema = require("../tpcp0_pb");
 const resMgr_schema = require("../resource_mgr_pb");
 
 myClientId = "TheTestClientPP"
-myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)
 
-amqp = require("amqplib/callback_api");
-var amqpChannel;
-var amqpConnection;
-amqp.connect('amqp://localhost', (err,conn) => {
-    amqpConnection = conn;
-    conn.createChannel((err, ch) => {
 
-        ch.assertQueue(myQueueName);
-        amqpChannel = ch;
+//
+// MQTT stuff
+//
+const mqtt = require('mqtt')
+var mqttClient = null;
+const TCP_URL = 'mqtt://localhost:1883'
+const TCP_TLS_URL = 'mqtts://localhost:8883'
 
-        // Setup consumer
-        amqpChannel.consume(myQueueName, (message) => {
-            // console.log('Got amqp pck');
-            handleResponse(message.content);
-        }, {noAck: true });
+const options = {
+    connectTimeout: 4000,
 
-        main(); // Dont run main until connection is up
+    // Authentication
+    clientId: 'TheTestClientPP',
+    // username: 'emqx',
+    // password: 'emqx',
 
-    });   
-});
+    keepalive: 60,
+    clean: true,
+}
+
+myTopic = "TheTestClientPP"; 
+mqttClient = mqtt.connect(TCP_URL, options)
+mqttClient.on('connect', () => {
+    
+    //console.log('MQTT connected')
+    main(); // Dont run main until connection is up
+})
+
+mqttClient.on('message', (topic, message) => {
+    // console.log('Received topic/message', topic, ':', message.toString())
+    handleResponse(message);
+})
+
+// myClientId = "TheTestClientPP"
+// myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)
+
+// amqp = require("amqplib/callback_api");
+// var amqpChannel;
+// var amqpConnection;
+// amqp.connect('amqp://localhost', (err,conn) => {
+//     amqpConnection = conn;
+//     conn.createChannel((err, ch) => {
+
+//         ch.assertQueue(myQueueName);
+//         amqpChannel = ch;
+
+//         // Setup consumer
+//         amqpChannel.consume(myQueueName, (message) => {
+//             // console.log('Got amqp pck');
+//             handleResponse(message.content);
+//         }, {noAck: true });
+
+//         main(); // Dont run main until connection is up
+
+//     });   
+// });
 
 
 handleResponse = function(packet) {
@@ -76,7 +112,7 @@ handleResponse = function(packet) {
 
             const tpcpRsp = tpcp_schema.TpcpRsp.deserializeBinary(r_bytes);
             tpcpRspType = tpcpRsp.getMsgtype();
-            console.log("Got tpcp message of type:", tpcpRspType);
+            // console.log("Got tpcp message of type:", tpcpRspType);
 
             switch(tpcpRspType) {
                 case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
@@ -218,6 +254,9 @@ function main() {
     machineId = process.argv[2]
     requestQueue = "Machine" + machineId;
 
+    mqttClient.subscribe(myTopic, (err) => {
+        if(err) { console.log('testclient_pp subs error:', err)}
+    })
 
 
     var cmd = null;
@@ -475,7 +514,7 @@ function main() {
 
         const resmgrCmd = new resMgr_schema.ResmgrCmd();
         resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE);
-        resmgrCmd.setResponsequeue(myQueueName);
+        resmgrCmd.setResponsequeue(myTopic);
         resmgrCmd.setCmdupdatestatus(cmdUpdateStatus);
 
         const bytes = resmgrCmd.serializeBinary();
@@ -487,45 +526,29 @@ function main() {
     }
 
     if (cmd === 'monitor') {
-        var bindings = ['#'];
 
-        if (process.argv.length >= 5) {
-            bindings = process.argv.slice(4);
+        const TCP_URL = 'mqtt://localhost:1883'       
+        const options = {
+            connectTimeout: 4000,
+            clientId: 'TheTestClientPPSubs',
+            keepalive: 60,
+            clean: true,
         }
-        bindings.forEach( function(binding) {
-            console.log('binding: ', binding);
+        
+        mqttSubsClient = mqtt.connect(TCP_URL, options)
+        mqttSubsClient.on('connect', () => {
+        
+
+            mqttSubsClient.subscribe('factory/PnP/Machines/+/State/+', (err) => {
+                if(err) { console.log('testclient_pp subs stat error:', err)}
+            })
+
+            mqttSubsClient.on('message', (topic, message) => {
+                console.log('Got', topic, ':', message.toString())
+            })
+              
         });
 
-
-        amqpConnection.createChannel(function(error1, channel) {
-            if (error1) {
-              throw error1;
-            }
-            var exchange = 'topic_ppMachines';
-        
-            channel.assertExchange(exchange, 'topic', {
-              durable: false
-            });
-        
-            channel.assertQueue('', {
-              exclusive: true
-            }, function(error2, q) {
-              if (error2) {
-                throw error2;
-              }
-              console.log('Waiting for status updates. To exit press CTRL+C');
-        
-              bindings.forEach(function(key) {
-                channel.bindQueue(q.queue, exchange, key);
-              });
-        
-              channel.consume(q.queue, function(msg) {
-                console.log("Got:", msg.fields.routingKey, msg.content.toString());
-              }, {
-                noAck: true
-              });
-            });
-        });
         return;
     }
 
@@ -549,7 +572,7 @@ function main() {
         //
         const resmgrCmd = new resMgr_schema.ResmgrCmd();
         resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
-        resmgrCmd.setResponsequeue(myQueueName);
+        resmgrCmd.setResponsetopic(myTopic);
         resmgrCmd.setCmdsendrequest(cmdSendRequest);
 
         //
@@ -557,8 +580,14 @@ function main() {
         //
         const bytes = resmgrCmd.serializeBinary();
         packet = Buffer.from(bytes)
-        amqpChannel.assertQueue(requestQueue);
-        amqpChannel.sendToQueue(requestQueue, packet);
+
+
+        var topic = "factory/PnP/Machines/" + machineId + '/Cmd';
+        mqttClient.publish( topic, packet, 
+            {retain: true}, (err) => {
+            if (err) { console.log('resmgr: mqtt publish err:', err);} 
+        })
+
         //console.log('message sent to', requestQueue);
         
         return;
