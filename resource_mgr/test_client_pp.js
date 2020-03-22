@@ -291,8 +291,9 @@ function main() {
         console.log('subsPe - Subscribe production engine status');
         console.log('subsMag - Subscribe mag status');
         console.log('subsNot - Subscribe notification status');
-        console.log('resMgrUs - Update status from resource mgr (never seen by tpsys)');
-        console.log('monitor - [topic [topic...]] Monitor messages from status topics eg monitor 0.ProductionEngine');
+//        console.log('resMgrUs - Update status from resource mgr (never seen by tpsys)');
+        console.log('monitor - Monitor messages from status all machines');
+        console.log('getTopic [topic] Report any latest data from any topic');
         console.log('=====================');
     }
 
@@ -549,6 +550,42 @@ function main() {
               
         });
 
+        return;
+    }
+
+
+    if (cmd === 'getTopic') {
+
+        topic = "factory/Config/Machines";
+
+        if (process.argv.length >= 5) {
+            topic = process.argv[4]
+        }
+ 
+        const TCP_URL = 'mqtt://localhost:1883'       
+        const options = {
+            connectTimeout: 4000,
+            clientId: 'TheTestClientPPSubs',
+            keepalive: 60,
+            clean: true,
+        }
+        
+        mqttSubsClient = mqtt.connect(TCP_URL, options)
+        mqttSubsClient.on('connect', () => {
+        
+
+            mqttSubsClient.subscribe(topic, (err) => {
+                if(err) { console.log('testclient_pp subs anytopic error:', err)}
+            })
+
+            mqttSubsClient.on('message', (topic, message) => {
+                console.log(message.toString())
+                mqttSubsClient.end();
+                process.exit(0);
+            })
+              
+        });
+        
         return;
     }
 

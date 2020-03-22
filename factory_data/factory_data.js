@@ -9,96 +9,126 @@ var myLayouts;
 var myMachines;
 var myProductionLines;
 
-//
-// AMQP stuff
-//
-amqp = require("amqplib/callback_api");
-var amqpChannel;
-const requestQueue = 'FactoryDataCmd';
-//var exchangeName = 'topic_ppMachines';
-//var subscriptionAmqpChannel;
+////////////////// mqtt for subscriptions /////////////////////////
 
-amqp.connect('amqp://localhost', (err,conn) => {
-    conn.createChannel((err, ch) => {
-
-        ch.assertQueue(requestQueue);
-        amqpChannel = ch;
-
-        // Setup consumer
-        amqpChannel.consume(requestQueue, (message) => {
-            console.log('Got: message');
-            handleMessage(message.content);
-        }, {noAck: true });
-    });   
-});
-
-
-
+const mqtt = require('mqtt')
 
 //
-// Handle incomming requests
+// mqtt connection
 //
-const factory_data_schema = require("./factory_data_pb");
-handleMessage = function(msg) {
-    console.log('Handle: ', msg);
+const TCP_URL = 'mqtt://localhost:1883'
+const TCP_TLS_URL = 'mqtts://localhost:8883'
 
-    const facdataCmd = factory_data_schema.FacdataCmd.deserializeBinary(msg);
-    responseQueue = facdataCmd.getResponsequeue();
-    cmdType = facdataCmd.getMsgtype();
-    console.log('got facdataCmd: ', cmdType, responseQueue);
+const options = {
+    connectTimeout: 4000,
 
-    amqpChannel.assertQueue(responseQueue);
-    facdataRsp = new factory_data_schema.FacdataRsp();
+    // Authentication
+    clientId: 'FactoryDataProvider',
+    // username: 'emqx',
+    // password: 'emqx',
 
-    switch(cmdType) {
-        case factory_data_schema.FacdataMsgType.GETLINESTYPE:
-            const rspGetLines = new factory_data_schema.RspGetLines();
+    keepalive: 60,
+    clean: true,
+}
 
-            // For now, just asume data is never changed, use own cache
-            rspGetLines.setLines(JSON.stringify(myProductionLines));
+mqttClient = mqtt.connect(TCP_URL, options)
+mqttClient.on('connect', () => {
+    console.log('MQTT connected')
 
-            facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETLINESTYPE);
-            facdataRsp.setRspgetlines(rspGetLines);
-            facdataRsp.setErrcode(0);
-            facdataRsp.setErrmsg("ok");
-            break;
+    main()  // Wait for connectiion before running main
+})
 
-        case factory_data_schema.FacdataMsgType.GETMACHINESTYPE:
-            const rspGetMachines = new factory_data_schema.RspGetMachines();
 
-            // For now, just asume data is never changed, use own cache
-            rspGetMachines.setMachines(JSON.stringify(myMachines));
+// //
+// // AMQP stuff
+// //
+// amqp = require("amqplib/callback_api");
+// var amqpChannel;
+// const requestQueue = 'FactoryDataCmd';
+// //var exchangeName = 'topic_ppMachines';
+// //var subscriptionAmqpChannel;
 
-            facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETMACHINESTYPE);
-            facdataRsp.setRspgetmachines(rspGetMachines);
-            facdataRsp.setErrcode(0);
-            facdataRsp.setErrmsg("ok");
-        break;
+// amqp.connect('amqp://localhost', (err,conn) => {
+//     conn.createChannel((err, ch) => {
+
+//         ch.assertQueue(requestQueue);
+//         amqpChannel = ch;
+
+//         // Setup consumer
+//         amqpChannel.consume(requestQueue, (message) => {
+//             console.log('Got: message');
+//             handleMessage(message.content);
+//         }, {noAck: true });
+//     });   
+// });
+
+
+
+
+// //
+// // Handle incomming requests
+// //
+// const factory_data_schema = require("./factory_data_pb");
+// handleMessage = function(msg) {
+//     console.log('Handle: ', msg);
+
+//     const facdataCmd = factory_data_schema.FacdataCmd.deserializeBinary(msg);
+//     responseQueue = facdataCmd.getResponsequeue();
+//     cmdType = facdataCmd.getMsgtype();
+//     console.log('got facdataCmd: ', cmdType, responseQueue);
+
+//     amqpChannel.assertQueue(responseQueue);
+//     facdataRsp = new factory_data_schema.FacdataRsp();
+
+//     switch(cmdType) {
+//         case factory_data_schema.FacdataMsgType.GETLINESTYPE:
+//             const rspGetLines = new factory_data_schema.RspGetLines();
+
+//             // For now, just asume data is never changed, use own cache
+//             rspGetLines.setLines(JSON.stringify(myProductionLines));
+
+//             facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETLINESTYPE);
+//             facdataRsp.setRspgetlines(rspGetLines);
+//             facdataRsp.setErrcode(0);
+//             facdataRsp.setErrmsg("ok");
+//             break;
+
+//         case factory_data_schema.FacdataMsgType.GETMACHINESTYPE:
+//             const rspGetMachines = new factory_data_schema.RspGetMachines();
+
+//             // For now, just asume data is never changed, use own cache
+//             rspGetMachines.setMachines(JSON.stringify(myMachines));
+
+//             facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETMACHINESTYPE);
+//             facdataRsp.setRspgetmachines(rspGetMachines);
+//             facdataRsp.setErrcode(0);
+//             facdataRsp.setErrmsg("ok");
+//         break;
         
-        case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:
-            const rspGetLayouts = new factory_data_schema.RspGetLayouts();
+//         case factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE:
+//             const rspGetLayouts = new factory_data_schema.RspGetLayouts();
 
-            // For now, just asume data is never changed, use own cache
-            rspGetLayouts.setLayouts(JSON.stringify(myLayouts));
+//             // For now, just asume data is never changed, use own cache
+//             rspGetLayouts.setLayouts(JSON.stringify(myLayouts));
 
-            facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE);
-            facdataRsp.setRspgetlayouts(rspGetLayouts);
-            facdataRsp.setErrcode(0);
-            facdataRsp.setErrmsg("ok");
-        break;
+//             facdataRsp.setMsgtype(factory_data_schema.FacdataMsgType.GETLAYOUTSTYPE);
+//             facdataRsp.setRspgetlayouts(rspGetLayouts);
+//             facdataRsp.setErrcode(0);
+//             facdataRsp.setErrmsg("ok");
+//         break;
         
-        default: 
-            console.log("factory_data: ignoring unexpected cmd type!", cmdType)
-    }
+//         default: 
+//             console.log("factory_data: ignoring unexpected cmd type!", cmdType)
+//     }
 
-    //
-    // Post response
-    // 
-    const bytes = facdataRsp.serializeBinary();                
-    packet = Buffer.from(bytes)
-    amqpChannel.sendToQueue(responseQueue, packet);
-    console.log('Rsp sent to ', responseQueue);
-};
+//     //
+//     // Post response
+//     // 
+//     const bytes = facdataRsp.serializeBinary();                
+//     packet = Buffer.from(bytes)
+//     amqpChannel.sendToQueue(responseQueue, packet);
+//     console.log('Rsp sent to ', responseQueue);
+// };
 
 
 //////////////////////////////////////
@@ -126,7 +156,19 @@ async function main() {
     console.log('factory_data starting', myProductionLines);
 
     // Give node some time to connect amqp
-    await sleep(200);
+    // await sleep(200);
+
+    mqttClient.publish( 'factory/Config/Lines', JSON.stringify(myProductionLines), 
+        {retain: true}, (err) => {
+        if (err) { console.log('factory_data: mqtt publish lines err:', err);} 
+    })
+    mqttClient.publish( 'factory/Config/Machines', JSON.stringify(myMachines), 
+        {retain: true}, (err) => {
+        if (err) { console.log('factory_data: mqtt publish lines err:', err);} 
+    })
+    mqttClient.publish( 'factory/ProductData/Layouts', JSON.stringify(myLayouts), 
+        {retain: true}, (err) => {
+        if (err) { console.log('factory_data: mqtt publish lines err:', err);} 
+    })
 }
-main()
 

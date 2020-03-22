@@ -1,5 +1,10 @@
 // Open topic hierarchy:
 //
+// factory/Config/Lines             - Factory_data publishes production lines
+// factory/Config/Machines          - Factory_data publishes machines
+//
+// factory/ProductData/Layouts      - Factory_data (tmp) publishes available Layouts
+//
 // factory/PnP/Machines/<SNR>/Cmd                           - Resource manager listens
 // factory/PnP/Machines/<SNR>/Cmd/<CmdType> - TBD               - Resource manager listens
 // factory/PnP/Machines/<SNR>/State/Meta                    - Resource manager publishes
