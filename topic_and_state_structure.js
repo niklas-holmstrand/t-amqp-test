@@ -16,6 +16,17 @@
 //                                  Kpi                     - Cdp publishes
 //
 //
+// Content of Config nodes:
+// Machines  = 
+//   [{"name":"Helsinki",
+//     "snr":"my300-9n0143",
+//     "hostname":"localhost:50000",
+//     "placeInLine":0,
+//     "model":"My300HX",
+//     "role":"PnP",
+//     "connected":false,
+//     "id":0}, ...
+//   ]
 //
 // Content of State nodes:
 //

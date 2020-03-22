@@ -647,7 +647,6 @@ mqttClient.on('connect', () => {
 subscriptionTopics = ['factory/Config/Lines',
 'factory/Config/Machines',
 'factory/Config/ProductData', 
-'factory/Config/ProductData', 
 'factory/PnP/Machines/+/State/Availability',
 'factory/PnP/Machines/+/State/ProductionEngine',
 'factory/PnP/Machines/+/State/ComponentLoading',
@@ -663,13 +662,12 @@ mqttClient.on('message', (topic, message) => {
   handleMessage(topic, message);
 })
 
-
 async function main() {
   gQlServer.start(() => console.log(`Server is running on http://localhost:4000`))
 
 
   //
-  // After short delay
+  // After short delay ...TBD fix...
   // expect all status/Available subscriptions to have returned ie myMachines indicates what machines that are available
   // Make them send complete fresh status
   //
@@ -687,3 +685,4 @@ async function main() {
 
   printFactoryState();
 }
+

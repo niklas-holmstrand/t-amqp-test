@@ -292,7 +292,7 @@ function main() {
         console.log('subsMag - Subscribe mag status');
         console.log('subsNot - Subscribe notification status');
 //        console.log('resMgrUs - Update status from resource mgr (never seen by tpsys)');
-        console.log('monitor - Monitor messages from status all machines');
+        console.log('monitor - [topic] Monitor messages. Default from status all machines');
         console.log('getTopic [topic] Report any latest data from any topic');
         console.log('=====================');
     }
@@ -528,6 +528,12 @@ function main() {
 
     if (cmd === 'monitor') {
 
+        topic = 'factory/PnP/Machines/+/State/+';
+
+        if (process.argv.length >= 5) {
+            topic = process.argv[4]
+        }
+
         const TCP_URL = 'mqtt://localhost:1883'       
         const options = {
             connectTimeout: 4000,
@@ -540,7 +546,7 @@ function main() {
         mqttSubsClient.on('connect', () => {
         
 
-            mqttSubsClient.subscribe('factory/PnP/Machines/+/State/+', (err) => {
+            mqttSubsClient.subscribe(topic, (err) => {
                 if(err) { console.log('testclient_pp subs stat error:', err)}
             })
 
