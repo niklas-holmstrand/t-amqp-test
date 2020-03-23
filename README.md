@@ -12,7 +12,7 @@ standard factory is found in factory_data/myFactory.js
 
 ## Start all components for a simulated factory in separated gnome-terminal tabs
 
-Make sure gnome-terminal is installed
+Make sure gnome-terminal is installed and from a gnome-terminal execute:
 
 ./spinup_factory.sh
 (if message broker is already running some docker complaints have to be ignored)
