@@ -1,26 +1,24 @@
 
 # Simulation of tpsys and stack up to GraphQL and react app
 
-Make sure proto compiler, protoc, is install and compile proto-files
+Make sure proto compiler, protoc, is install and compile proto-files and install java script dependencies
 ./build.sh
-
-If not done already, install needed node packages
-npm install
-cd frontend/tpsys_tiny
-npm install
 
 
 Tha factory configuration is fetched from smtdb or from own hardcoded DB simulation. 
 This selection in done by commenting one of these in factory_data/factory_data.js. The hardcoded
-factory is found in factory_data/myFactory.js
+standard factory is found in factory_data/myFactory.js
 
 
 ## Start all components for a simulated factory in separated gnome-terminal tabs
+
+Make sure gnome-terminal is installed
 
 ./spinup_factory.sh
 (if message broker is already running some docker complaints have to be ignored)
 
 If all goes well a all components are started an a webbrowser is opened connected to factory.
+In the simX-tabs it is possible to write simulator commands like "manload", "magbut 8" etc
 
 
 ## Start components manually
@@ -39,32 +37,34 @@ node cli_client 0 play
 
 
 
-To start a resource manager connecting to machine and AMQP-server
+To start a resource manager connecting to machine and MQTT-server
 cd resource_mgr
 node resource_mgr.js <machineNo>
 
 
-To start AMQP-server
-Make sure docker and rabbitMq image is available
+To start MQTT-server. EMQX docker image seems to be downloaded automatically. If not get it manually.
 ./start_mq.sh
 
 
-To acces machines from ampq client
+To access machines from MQTT client
 cd resource_mgr
 node test_client_pp.js <machineNo> <cmd>
-Note cmd "monitor" for subscribing to different topics
+    cmd = "?" for help
+    Note cmd "monitor" for subscribing to different topics
 
 
 To follow state of factory
 cd status_mon
 node status_mon.js   - just a dumb thing that collects status updates and presents collected state
-node status_cache.js - builds a cache of all machines and request their data to create a fresh cache
+
 
 
 Start tiny gui (dev server)
 cd frontend/tpsys_tiny
 npm start
 browse to localhost:3000 for react gui(s)
+
+
 
 
 
