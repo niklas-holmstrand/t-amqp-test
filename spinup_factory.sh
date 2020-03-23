@@ -18,13 +18,17 @@ fi
 
 
 # Start factory configuration datasource
+echo "Start factory-data..."
 gnome-terminal --tab -- start_scripts/run_facdata.sh
 
 # simulators and their resource magagers
+echo "Start sim & resmgr 0..."
 gnome-terminal --tab -- start_scripts/run_sim.sh 0
 gnome-terminal --tab -- start_scripts/run_resmgr.sh 0
+echo "Start sim & resmgr 1..."
 gnome-terminal --tab -- start_scripts/run_sim.sh 1
 gnome-terminal --tab -- start_scripts/run_resmgr.sh 1
+echo "Start sim & resmgr 2..."
 gnome-terminal --tab -- start_scripts/run_sim.sh 2
 gnome-terminal --tab -- start_scripts/run_resmgr.sh 2
 

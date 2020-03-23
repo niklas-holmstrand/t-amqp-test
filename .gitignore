@@ -7,6 +7,9 @@
 *.o
 *.so
 
+
+
+
 # Packages #
 ############
 # it's better to unpack these files and commit the raw source
@@ -39,3 +42,7 @@ Thumbs.db
 
 node_modules/*
 frontend/tpsys_tiny/node_modules/*
+
+# protobuf generated javascript
+*_pb.js
+
