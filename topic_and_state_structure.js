@@ -5,8 +5,6 @@
 //
 // factory/ProductData/Layouts      - Factory_data (tmp) publishes available Layouts
 //
-// factory/PnP/Machines/<SNR>/Cmd                           - Resource manager listens
-// factory/PnP/Machines/<SNR>/Cmd/<CmdType> - TBD               - Resource manager listens
 // factory/PnP/Machines/<SNR>/State/Meta                    - Resource manager publishes
 //                                  Availability            - Resource manager publishes
 //                                  ProductionEngine        - Machine publishes (via resmgr?)

@@ -6,7 +6,33 @@ const tpcp_schema = require("../tpcp0_pb");
 const resMgr_schema = require("../resource_mgr_pb");
 
 myClientId = "TheTestClientPP"
+myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)
 
+//
+// AMQP connection
+//
+
+amqp = require("amqplib/callback_api");
+var amqpChannel;
+var amqpConnection;
+amqp.connect('amqp://localhost', (err,conn) => {
+    amqpConnection = conn;
+    conn.createChannel((err, ch) => {
+	console.log('AMQP channel created');
+
+        ch.assertQueue(myQueueName);
+        amqpChannel = ch;
+
+        // Setup consumer
+        amqpChannel.consume(myQueueName, (message) => {
+            // console.log('Got amqp pck');
+            handleResponse(message.content);
+        }, {noAck: true });
+
+        main(); // Dont run main until connection is up
+
+    });   
+});
 
 //
 // MQTT stuff
@@ -28,12 +54,11 @@ const options = {
     clean: true,
 }
 
-myTopic = "TheTestClientPP"; 
 mqttClient = mqtt.connect(TCP_URL, options)
 mqttClient.on('connect', () => {
     
     //console.log('MQTT connected')
-    main(); // Dont run main until connection is up
+    // tbd amqp seems slower to connect..run main from there    main(); // Dont run main until connection is up
 })
 
 mqttClient.on('message', (topic, message) => {
@@ -41,29 +66,6 @@ mqttClient.on('message', (topic, message) => {
     handleResponse(message);
 })
 
-// myClientId = "TheTestClientPP"
-// myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)
-
-// amqp = require("amqplib/callback_api");
-// var amqpChannel;
-// var amqpConnection;
-// amqp.connect('amqp://localhost', (err,conn) => {
-//     amqpConnection = conn;
-//     conn.createChannel((err, ch) => {
-
-//         ch.assertQueue(myQueueName);
-//         amqpChannel = ch;
-
-//         // Setup consumer
-//         amqpChannel.consume(myQueueName, (message) => {
-//             // console.log('Got amqp pck');
-//             handleResponse(message.content);
-//         }, {noAck: true });
-
-//         main(); // Dont run main until connection is up
-
-//     });   
-// });
 
 
 handleResponse = function(packet) {
@@ -254,9 +256,6 @@ function main() {
     machineId = process.argv[2]
     requestQueue = "Machine" + machineId;
 
-    mqttClient.subscribe(myTopic, (err) => {
-        if(err) { console.log('testclient_pp subs error:', err)}
-    })
 
 
     var cmd = null;
@@ -515,7 +514,7 @@ function main() {
 
         const resmgrCmd = new resMgr_schema.ResmgrCmd();
         resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.UPDATESTATUSTYPE);
-        resmgrCmd.setResponsequeue(myTopic);
+        resmgrCmd.setResponsequeue(myQueueName);
         resmgrCmd.setCmdupdatestatus(cmdUpdateStatus);
 
         const bytes = resmgrCmd.serializeBinary();
@@ -615,7 +614,7 @@ function main() {
         //
         const resmgrCmd = new resMgr_schema.ResmgrCmd();
         resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
-        resmgrCmd.setResponsetopic(myTopic);
+        resmgrCmd.setResponsequeue(myQueueName);
         resmgrCmd.setCmdsendrequest(cmdSendRequest);
 
         //
@@ -623,14 +622,8 @@ function main() {
         //
         const bytes = resmgrCmd.serializeBinary();
         packet = Buffer.from(bytes)
-
-
-        var topic = "factory/PnP/Machines/" + machineId + '/Cmd';
-        mqttClient.publish( topic, packet, 
-            {retain: true}, (err) => {
-            if (err) { console.log('resmgr: mqtt publish err:', err);} 
-        })
-
+        amqpChannel.assertQueue(requestQueue);
+        amqpChannel.sendToQueue(requestQueue, packet);
         //console.log('message sent to', requestQueue);
         
         return;

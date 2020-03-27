@@ -20,7 +20,7 @@ enum ResmgrMsgType {
 
 message ResmgrCmd {
   ResmgrMsgType msgType = 1;      // What is the payload?
-  string responseTopic = 2;       // Where to post response
+  string responseQueue = 2;       // Where to post response
 
   oneof payload {
     CmdSendRequest cmdSendRequest = 3;

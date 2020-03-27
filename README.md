@@ -22,6 +22,10 @@ factory is found in factory_data/myFactory.js
 
 If all goes well a all components are started an a webbrowser is opened connected to factory.
 
+Broker administration on 
+http://localhost:18083 (emqpx, admin/public)
+http://localhost:8080 (rabbitmq, guest/guest)
+
 
 ## Start components manually
 

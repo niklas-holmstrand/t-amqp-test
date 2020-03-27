@@ -1,4 +1,29 @@
 machineId = process.argv[2];
+//
+// AMQP stuff
+//
+
+amqp = require("amqplib/callback_api");
+
+var amqpChannel;
+const requestQueue = 'Machine'+ machineId;
+var exchangeName = 'topic_ppMachines';
+
+amqp.connect('amqp://localhost', (err,conn) => {
+    conn.createChannel((err, ch) => {
+
+        ch.assertQueue(requestQueue);
+        amqpChannel = ch;
+
+        // Setup consumer
+        amqpChannel.consume(requestQueue, (message) => {
+            console.log('Got: message');
+            handleMessage(message.content);
+        }, {noAck: true });
+    });   
+
+
+});
 
 //
 // gRPC-tunnel stuff
@@ -114,9 +139,11 @@ handleMessage = function(msg) {
     //console.log('Handle: ', msg);
 
     const resmgrCmd = pb_schema.ResmgrCmd.deserializeBinary(msg);
-    responseTopic = resmgrCmd.getResponsetopic();
+    responseQueue = resmgrCmd.getResponsequeue();
     resmgrCmdType = resmgrCmd.getMsgtype();
-    console.log('got ResmgrCmd: ', resmgrCmdType, responseTopic);
+    console.log('got ResmgrCmd: ', resmgrCmdType, responseQueue);
+
+    amqpChannel.assertQueue(responseQueue);
 
 
     switch(resmgrCmdType) {
@@ -162,12 +189,8 @@ handleMessage = function(msg) {
 
                 const bytes = resmgrRsp.serializeBinary();                
                 packet = Buffer.from(bytes)
-                mqttClient.publish( responseTopic, packet, 
-                    {retain: false}, (err) => {
-                    if (err) { console.log('resmgr: mqtt publish err:', err);} 
-                })
-
-                console.log('Sent rspSendRequest to ', responseTopic);
+                amqpChannel.sendToQueue(responseQueue, packet);
+                console.log('Sent rspSendRequest to ', responseQueue);
             });
             break;
 

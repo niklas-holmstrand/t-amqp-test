@@ -1,20 +1,95 @@
 const {GraphQLServer} = require('graphql-yoga');
 const {typeDefs} = require('./graphql_schema')
 
-
 const tpcp_schema = require("../tpcp0_pb");
 const resMgr_schema = require("../resource_mgr_pb");
 
-myTopicName = "GuiProvider";
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// MQTT connection
+//
+const mqtt = require('mqtt')
+
+const TCP_URL = 'mqtt://localhost:1883'
+const TCP_TLS_URL = 'mqtts://localhost:8883'
+
+const options = {
+    connectTimeout: 4000,
+
+    // Authentication
+    clientId: 'GuiProvider',
+    // username: 'emqx',
+    // password: 'emqx',
+
+    keepalive: 60,
+    clean: true,
+}
+
+mqttClient = mqtt.connect(TCP_URL, options)
+mqttClient.on('connect', () => {
+    console.log('MQTT connected')
+
+})
 
 
+subscriptionTopics = ['factory/Config/Lines',
+'factory/Config/Machines',
+'factory/ProductData/Layouts', 
+'factory/PnP/Machines/+/State/Availability',
+'factory/PnP/Machines/+/State/ProductionEngine',
+'factory/PnP/Machines/+/State/ComponentLoading',
+'factory/PnP/Machines/+/State/Notifications'];
+
+mqttClient.subscribe(subscriptionTopics, (err) => {
+  if(err) { console.log('guiprovider mqtt subs error:', err)}
+})
+
+mqttClient.on('message', (topic, message) => {
+  //console.log('got mqtt:', topic, message.toString())
+  handleMqttMessage(topic, message);
+})
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// AMQP connection
+//
+myQueueName = "GuiProvider";
+
+amqp = require("amqplib/callback_api");
+var amqpChannel;
+var amqpConnection;
+amqp.connect('amqp://localhost', (err,conn) => {
+    amqpConnection = conn;
+    if(err) {
+      console.log("No connection to message queue??");
+      console.log(err);
+      process.exit(-1);
+    }
+
+    // Setup my input queue
+    conn.createChannel((err, ch) => {
+
+        ch.assertQueue(myQueueName);
+        amqpChannel = ch;
+
+        amqpChannel.consume(myQueueName, (message) => {
+            // console.log('Got amqp pck');
+            handleAmqpResponse(message.content);
+        }, {noAck: true });
+
+    }); 
+    
+    main()  // Wait for connection before running main
+    
+});
 
 
 ///////////////////////////////////////////////////////////////
 //
-// Handling of incomming messages
+// Handling of incomming status messages
 //
-function handleMessage(topic, message){
+function handleMqttMessage(topic, message){
 
   if (topic.indexOf('/State/Availability') != -1 ||
       topic.indexOf('/State/ProductionEngine') != -1 ||
@@ -27,14 +102,119 @@ function handleMessage(topic, message){
   switch(topic) {
     case 'factory/Config/Lines':  myProductionLines = JSON.parse(message);            break;
     case 'factory/Config/Machines':  myMachines = JSON.parse(message);      break;
-    case 'factory/Config/ProductData':  myLayouts = JSON.parse(message);    break;
-    case myTopicName: handleResponse(message);                              break;
+    case 'factory/ProductData/Layouts':  myLayouts = JSON.parse(message);  break;
     default: console.log('Got unknown topic: ', topic);
   }
 }
 
+
+function handleStatusUpdates(topic, msg) {
+  topicPath = topic.split("/");
+  machineId = topicPath[3];
+  machineTopic = topicPath[5]
+  recState = JSON.parse(msg);
+  //console.log("Handle status update", machineId, machineTopic, recState);
+
+  // find in myMachines
+  // If different update status & actions
+  i = myMachines.findIndex(m => m.id == machineId);
+  if(i == -1) {
+    //console.log('myMachines:', myMachines);
+    console.log('Got status from unknown machine!', machineId, machineTopic, recState);
+    return;
+  }
+
+
+  if (machineTopic == "Availability") {
+    console.log("Got ResourceState machineId", machineId);
+    if(myMachines[i].connected != recState.resourceConnected) {
+      myMachines[i].connected = recState.resourceConnected;
+      pubsub.publish(MachineConnectionStatusChanged_TOPIC + machineId, {machine: myMachines[i]})
+      pubsub.publish(MachineConnectionStatusChanged_TOPIC, {machines: myMachines})
+    }
+  }
+
+  if (machineTopic == "ProductionEngine") {
+    updateStatusCashe(machineId, productionEnginesCashe, recState);
+    pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
+  }
+
+  if (machineTopic == "Notifications") {
+    updateStatusCashe(machineId, notificationStatusCashe, recState);
+    pubsub.publish(NotStatusChanged_TOPIC + machineId, {notificationStatus: recState});
+
+    // old dirty TBD. Internally publish complete notification list
+    allNotifications = [];
+    notificationStatusCashe.forEach( r => {
+      allNotifications = allNotifications.concat(r.state);
+    } )
+    pubsub.publish(NotStatusChanged_TOPIC, {notifications: allNotifications}) 
+  }
+
+  if (machineTopic == "ComponentLoading") {
+    console.log('Magazine status recieved:', machineId, recState);
+    updateStatusCashe(machineId, magazineStatusCashe, recState);
+    pubsub.publish(MagStatusChanged_TOPIC + machineId, {magazineStatus: recState});
+  }
+
+}
+
+//
+// Status chashing
+//
+productionEnginesCashe = []; // Will contain vector {id: <machineId>: state: <PE-object>}
+notificationStatusCashe = []; // Will contain vector {id: <machineId>: state: <not-object>}
+magazineStatusCashe = []; // Will contain vector {id: <machineId>: state: <mag-object>}
+
+//
+// update cashe with new state. Add to chashe if no status is recorded yet
+//
+function updateStatusCashe(machineId, cashe, newState) {
+  i = cashe.findIndex(record => record.id == machineId);
+  if(i == -1) {
+    cashe.push({id: machineId, state: newState});
+  } else {
+    cashe[i].state = newState;
+  }
+}
+
+function getCashedStatus(machineId, cashe) {
+    i = cashe.findIndex(record => record.id == machineId);
+  if(i == -1) {
+    console.log('no state cached for machine:', machineId);
+    return null;
+  } else {
+    return cashe[i].state;
+  }
+
+}
+
+//
+// Mimic old notification struct form data_provision time. TBD cleanup!
+//
+function getNotState(machineId) {
+  casheRecord = notificationStatusCashe.find(r => r.id == machineId); 
+
+  notVector = null;
+  if (casheRecord)  {
+    notVector = casheRecord.state; 
+  }
+
+  if (!notVector) {
+    notVector = [];
+  }
+
+  const notificationsState = {notifications: notVector};
+  return notificationsState;
+}
+
+
+///////////////////////////////////////////////////////////////
+//
+// Handling of incomming responses
+//
 var cmdPromiseTrigger = null; // TBD!! collection of outstanding cmds
-handleResponse = function(packet) {
+handleAmqpResponse = function(packet) {
     //console.log('Handle packet: ', packet);
 
     //
@@ -140,107 +320,94 @@ handleResponse = function(packet) {
 }
 
 
-function handleStatusUpdates(topic, msg) {
-  topicPath = topic.split("/");
-  machineId = topicPath[3];
-  machineTopic = topicPath[5]
-  recState = JSON.parse(msg);
-  //console.log("Handle status update", machineId, machineTopic, recState);
+/////////////////////////////////////////////////////////////////////
+//
+// Sending of commands
+//
 
-  // find in myMachines
-  // If different update status & actions
-  i = myMachines.findIndex(m => m.id == machineId);
-  if(i == -1) {
-    //console.log('myMachines:', myMachines);
-    console.log('Got status from unknown machine!', machineId, machineTopic, recState);
-    return;
-  }
+//
+// Send a command to machine, wait for its response and return graphQl-response. 
+// Note commands with responses with anything but errmsg and errcode are not supported.
+//
 
+function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
+    const tpcpCmd = new tpcp_schema.TpcpCmd();
 
-  if (machineTopic == "Availability") {
-    console.log("Got ResourceState machineId", machineId);
-    if(myMachines[i].connected != recState.resourceConnected) {
-      myMachines[i].connected = recState.resourceConnected;
-      pubsub.publish(MachineConnectionStatusChanged_TOPIC + machineId, {machine: myMachines[i]})
-      pubsub.publish(MachineConnectionStatusChanged_TOPIC, {machines: myMachines})
+    tpcpCmd.setMsgtype(tpcpType);
+
+    switch(tpcpType) {
+      case tpcp_schema.TpcpMsgType.PLAYTYPE:          tpcpCmd.setCmdplay(tpcpCmdMsg);         break;
+      case tpcp_schema.TpcpMsgType.PAUSETYPE:         tpcpCmd.setCmdpause(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.STOPTYPE:          tpcpCmd.setCmdstop(tpcpCmdMsg);         break;
+      case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:    tpcpCmd.setCmdstartbatch(tpcpCmdMsg);   break;
+      case tpcp_schema.TpcpMsgType.SUBSPETYPE:        tpcpCmd.setCmdsubspe(tpcpCmdMsg);       break;
+      case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:        tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:    tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:              tpcpCmd.setCmdnqrloadboard(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRREMOVEBOARDTYPE:            tpcpCmd.setCmdnqrremoveboard(tpcpCmdMsg);        break;
+      case tpcp_schema.TpcpMsgType.NQRUNLOADANYLOADEDBOARDTYPE:   tpcpCmd.setCmdunloadanyloadedboard(tpcpCmdMsg);        break;
+
+      default: console.log('Unknown tpcp cmd type: ', tpcpType); return;
     }
-  }
 
-  if (machineTopic == "ProductionEngine") {
-    updateStatusCashe(machineId, productionEnginesCashe, recState);
-    pubsub.publish(ProdEngineChanged_TOPIC + machineId, {productionEngine: recState});
-  }
+    //
+    // Create resource_mgr payload
+    //
+    const cmdSendRequest = new resMgr_schema.CmdSendRequest();
+    cmdSendRequest.setClientid("GuiProvider TBD userid..");
+    cmdSendRequest.setReserveresource(false);
+    tpcpCmdByteStr = tpcpCmd.serializeBinary().toString()     // To string since protobuff seems to only support "string payload"
+    cmdSendRequest.setRequest(tpcpCmdByteStr);
 
-  if (machineTopic == "Notifications") {
-    updateStatusCashe(machineId, notificationStatusCashe, recState);
-    pubsub.publish(NotStatusChanged_TOPIC + machineId, {notificationStatus: recState});
+    //
+    // Put in resource_mgr envelop
+    //
+    const resmgrCmd = new resMgr_schema.ResmgrCmd();
+    resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
+    resmgrCmd.setResponsequeue(myQueueName);
+    resmgrCmd.setCmdsendrequest(cmdSendRequest);
 
-    // old dirty TBD. Internally publish complete notification list
-    allNotifications = [];
-    notificationStatusCashe.forEach( r => {
-      allNotifications = allNotifications.concat(r.state);
-    } )
-    pubsub.publish(NotStatusChanged_TOPIC, {notifications: allNotifications}) 
-  }
-
-  if (machineTopic == "ComponentLoading") {
-    console.log('Magazine status recieved:', machineId, recState);
-    updateStatusCashe(machineId, magazineStatusCashe, recState);
-    pubsub.publish(MagStatusChanged_TOPIC + machineId, {magazineStatus: recState});
-  }
-
+    //
+    // Put on message queue
+    //
+    requestQueue = 'Machine' + machineId;
+    const bytes = resmgrCmd.serializeBinary();
+    packet = Buffer.from(bytes)
+    amqpChannel.assertQueue(requestQueue);
+    amqpChannel.sendToQueue(requestQueue, packet);
+    //console.log('message sent to', requestQueue);
+    
+    return;
 }
 
-//////////
-//
-// Status chashing
-//
-productionEnginesCashe = []; // Will contain vector {id: <machineId>: state: <PE-object>}
-notificationStatusCashe = []; // Will contain vector {id: <machineId>: state: <not-object>}
-magazineStatusCashe = []; // Will contain vector {id: <machineId>: state: <mag-object>}
 
 //
-// update cashe with new state. Add to chashe if no status is recorded yet
+// Send a command to machine, wait for its response and return graphQl-response. 
+// Note commands with responses with anything but errmsg and errcode are not supported.
 //
-function updateStatusCashe(machineId, cashe, newState) {
-  i = cashe.findIndex(record => record.id == machineId);
-  if(i == -1) {
-    cashe.push({id: machineId, state: newState});
-  } else {
-    cashe[i].state = newState;
+async function sendCmdWaitRspToGql(cmd, cmdType, machineId, name)
+{
+  console.log('Send: ', name, 'machine', machineId);
+  sendRequest(cmd, cmdType, machineId);
+
+  // wait for response to be received
+  let gqlRes = { errCode: -1, errMsg: 'Err never set - gui provier error!' };
+  const p = new Promise((resolve, reject) => {
+    cmdPromiseTrigger = resolve;
+    setTimeout( function() {reject()}, 5000 );
+  }).then(res => { gqlRes = { errCode: res.getErrcode(), errMsg: res.getErrmsg() } },
+          rej => { gqlRes = { errCode: -9000, errMsg: "GuiProvider:Timeout waiting for response" }}
+  );
+  await p;
+
+  if (gqlRes.errCode != 0) {
+    console.log(name, ' failed: ' + gqlRes.errMsg);
   }
+
+  console.log(name, ' result: ', machineId, gqlRes); // Temporary
+  return gqlRes
 }
-
-function getCashedStatus(machineId, cashe) {
-    i = cashe.findIndex(record => record.id == machineId);
-  if(i == -1) {
-    console.log('no state cached for machine:', machineId);
-    return null;
-  } else {
-    return cashe[i].state;
-  }
-
-}
-
-//
-// Mimic old notification struct form data_provision time. TBD cleanup!
-//
-function getNotState(machineId) {
-  casheRecord = notificationStatusCashe.find(r => r.id == machineId); 
-
-  notVector = null;
-  if (casheRecord)  {
-    notVector = casheRecord.state; 
-  }
-
-  if (!notVector) {
-    notVector = [];
-  }
-
-  const notificationsState = {notifications: notVector};
-  return notificationsState;
-}
-
+ 
 
 const {_} = require('lodash')
 const {PubSub} = require('graphql-subscriptions');
@@ -336,87 +503,6 @@ const getNotifications = () => {
 //    return true;
 //  }
 
-
-function sendRequest (tpcpCmdMsg, tpcpType, machineId) {
-    const tpcpCmd = new tpcp_schema.TpcpCmd();
-
-    tpcpCmd.setMsgtype(tpcpType);
-
-    switch(tpcpType) {
-      case tpcp_schema.TpcpMsgType.PLAYTYPE:          tpcpCmd.setCmdplay(tpcpCmdMsg);         break;
-      case tpcp_schema.TpcpMsgType.PAUSETYPE:         tpcpCmd.setCmdpause(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.STOPTYPE:          tpcpCmd.setCmdstop(tpcpCmdMsg);         break;
-      case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:    tpcpCmd.setCmdstartbatch(tpcpCmdMsg);   break;
-      case tpcp_schema.TpcpMsgType.SUBSPETYPE:        tpcpCmd.setCmdsubspe(tpcpCmdMsg);       break;
-      case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:        tpcpCmd.setCmdsubsmagazinestatus(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:    tpcpCmd.setCmdsubsnotificationstatus(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:              tpcpCmd.setCmdnqrloadboard(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.NQRREMOVEBOARDTYPE:            tpcpCmd.setCmdnqrremoveboard(tpcpCmdMsg);        break;
-      case tpcp_schema.TpcpMsgType.NQRUNLOADANYLOADEDBOARDTYPE:   tpcpCmd.setCmdunloadanyloadedboard(tpcpCmdMsg);        break;
-
-      default: console.log('Unknown tpcp cmd type: ', tpcpType); return;
-    }
-
-    //
-    // Create resource_mgr payload
-    //
-    const cmdSendRequest = new resMgr_schema.CmdSendRequest();
-    cmdSendRequest.setClientid("GuiProvider TBD userid..");
-    cmdSendRequest.setReserveresource(false);
-    tpcpCmdByteStr = tpcpCmd.serializeBinary().toString()     // To string since protobuff seems to only support "string payload"
-    cmdSendRequest.setRequest(tpcpCmdByteStr);
-
-    //
-    // Put in resource_mgr envelop
-    //
-    const resmgrCmd = new resMgr_schema.ResmgrCmd();
-    resmgrCmd.setMsgtype(resMgr_schema.ResmgrMsgType.SENDREQUESTTYPE);
-    resmgrCmd.setResponsetopic(myTopicName);
-    resmgrCmd.setCmdsendrequest(cmdSendRequest);
-
-    //
-    // Put on message queue
-    //
-    const bytes = resmgrCmd.serializeBinary();
-    packet = Buffer.from(bytes)
-    var topic = "factory/PnP/Machines/" + machineId + '/Cmd';
-    mqttClient.publish( topic, packet, 
-        {retain: true}, (err) => {
-        if (err) { console.log('resmgr: mqtt publish err:', err);} 
-    })
-    //console.log('message sent to', requestQueue);
-    
-    return;
-}
-
-
-//
-// Send a command to machine, wait for its response and return graphQl-response. 
-// Note commands with responses with anything but errmsg and errcode are not supported.
-//
-async function sendCmdWaitRspToGql(cmd, cmdType, machineId, name)
-{
-  console.log('Send: ', name, 'machine', machineId);
-  sendRequest(cmd, cmdType, machineId);
-
-  // wait for response to be received
-  let gqlRes = { errCode: -1, errMsg: 'Err never set - gui provier error!' };
-  const p = new Promise((resolve, reject) => {
-    cmdPromiseTrigger = resolve;
-    setTimeout( function() {reject()}, 5000 );
-  }).then(res => { gqlRes = { errCode: res.getErrcode(), errMsg: res.getErrmsg() } },
-          rej => { gqlRes = { errCode: -9000, errMsg: "GuiProvider:Timeout waiting for response" }}
-  );
-  await p;
-
-  if (gqlRes.errCode != 0) {
-    console.log(name, ' failed: ' + gqlRes.errMsg);
-  }
-
-  console.log(name, ' result: ', machineId, gqlRes); // Temporary
-  return gqlRes
-}
- 
 
 const resolvers = {
   Query: {
@@ -614,53 +700,6 @@ function sleep(millis) {
 }
 
 
-///////////////////// MQTT connection ///////////////////////////
-//
-//
-const mqtt = require('mqtt')
-
-//
-// mqtt connection
-//
-const TCP_URL = 'mqtt://localhost:1883'
-const TCP_TLS_URL = 'mqtts://localhost:8883'
-
-const options = {
-    connectTimeout: 4000,
-
-    // Authentication
-    clientId: 'GuiProvider',
-    // username: 'emqx',
-    // password: 'emqx',
-
-    keepalive: 60,
-    clean: true,
-}
-
-mqttClient = mqtt.connect(TCP_URL, options)
-mqttClient.on('connect', () => {
-    console.log('MQTT connected')
-
-    main()  // Wait for connectiion before running main
-})
-
-subscriptionTopics = ['factory/Config/Lines',
-'factory/Config/Machines',
-'factory/Config/ProductData', 
-'factory/PnP/Machines/+/State/Availability',
-'factory/PnP/Machines/+/State/ProductionEngine',
-'factory/PnP/Machines/+/State/ComponentLoading',
-'factory/PnP/Machines/+/State/Notifications',
-myTopicName];
-
-mqttClient.subscribe(subscriptionTopics, (err) => {
-  if(err) { console.log('guiprovider mqtt subs error:', err)}
-})
-
-mqttClient.on('message', (topic, message) => {
-  //console.log('got mqtt:', topic, message.toString())
-  handleMessage(topic, message);
-})
 
 async function main() {
   gQlServer.start(() => console.log(`Server is running on http://localhost:4000`))

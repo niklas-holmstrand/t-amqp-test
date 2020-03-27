@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@grpc/proto-loader": "^0.4.0",
+    "amqplib": "^0.5.5",
     "express": "^4.16.4",
     "google-protobuf": "^3.11.4",
     "graphql-subscriptions": "^1.0.0",
