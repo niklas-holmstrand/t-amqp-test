@@ -2,8 +2,8 @@
  * test the tpsys_server 
  * 
  */
-const tpcp_schema = require("../tpcp0_pb");
-const resMgr_schema = require("../resource_mgr_pb");
+const tpcp_schema = require("../tpsys_sim/tpcp_pb");
+const resMgr_schema = require("../resource_mgr/resource_mgr_pb");
 
 myClientId = "TheTestClientPP"
 myQueueName = "TheTestClientPP"; // + Math.floor(Math.random() * 1000)

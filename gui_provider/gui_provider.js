@@ -1,8 +1,8 @@
 const {GraphQLServer} = require('graphql-yoga');
 const {typeDefs} = require('./graphql_schema')
 
-const tpcp_schema = require("../tpcp0_pb");
-const resMgr_schema = require("../resource_mgr_pb");
+const tpcp_schema = require("../tpsys_sim/tpcp_pb");
+const resMgr_schema = require("../resource_mgr/resource_mgr_pb");
 
 
 //////////////////////////////////////////////////////////////////////////////

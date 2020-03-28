@@ -2,10 +2,9 @@
  * test the tpsys_server
  * 
  */
-const tpcp_schema = require("../tpcp0_pb");
+const tpcp_schema = require("../tpsys_sim/tpcp_pb");
 
 
-//var PROTO_PATH = __dirname + '../tpcp0.proto';
 var PROTO_PATH = '../tunnel.proto';
 
 var grpc = require('grpc');

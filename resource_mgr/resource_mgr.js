@@ -87,7 +87,7 @@ mqttClient.on('message', (topic, message) => {
 //
 //
 //
-const pb_schema = require("../resource_mgr_pb");
+const pb_schema = require("./resource_mgr_pb");
 
 var myStatus = {
     resMgrRunning: true,

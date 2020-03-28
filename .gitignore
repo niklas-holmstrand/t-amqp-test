@@ -39,3 +39,6 @@ Thumbs.db
 
 node_modules/*
 frontend/tpsys_tiny/node_modules/*
+tpsys_sim/tpcp_pb.js
+resource_mgr/resource_mgr_pb.js
+factory_data/factory_data_pb.js

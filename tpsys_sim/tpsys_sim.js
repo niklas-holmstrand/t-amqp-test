@@ -112,7 +112,7 @@ var imageFeederObj = {
 
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
-const tpcp_schema = require("../tpcp0_pb");
+const tpcp_schema = require("./tpcp_pb");
 var heartBeatSubscription;
 
 function subscribeHeartBeats(call, callback) {
