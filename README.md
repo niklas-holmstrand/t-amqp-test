@@ -17,6 +17,7 @@ factory is found in factory_data/myFactory.js
 
 ## Start all components for a simulated factory in separated gnome-terminal tabs
 
+From a gnome-shell execute:
 ./spinup_factory.sh
 (if message broker is already running some docker complaints have to be ignored)
 
@@ -37,9 +38,9 @@ stdin commands: magrem (slotNo), magbut (slotno), magins (slotno) (name)
 
 To access machine directly via gRPC-tunnel (incomplete!)
 cd cli_client
-node cli_client.js <machineNo> <cmd>
+node client_tunnel.js <machineNo> <cmd>
 example
-node cli_client 0 play
+node client_tunnel 0 play
 
 
 
@@ -53,19 +54,23 @@ Make sure docker and rabbitMq image is available
 ./start_mq.sh
 
 
-To acces machines from ampq client
-cd resource_mgr
-node test_client_pp.js <machineNo> <cmd>
+To acces machines from ampq/mqtt client
+cd cli_client
+node pp_client.js <machineNo> <cmd>
+Note cmd "?" for help
 Note cmd "monitor" for subscribing to different topics
 
 
 To follow state of factory
 cd status_mon
-node status_mon.js   - just a dumb thing that collects status updates and presents collected state
-node status_cache.js - builds a cache of all machines and request their data to create a fresh cache
+node status_mon.js   - Monitor factory state 
 
 
 Start tiny gui (dev server)
+
+cd gui_provider
+node gui_provider
+
 cd frontend/tpsys_tiny
 npm start
 browse to localhost:3000 for react gui(s)

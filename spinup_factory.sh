@@ -8,8 +8,8 @@
 
 # IF successful, assume no broker was running. Give it some time so start
 if [ $? = 0 ]; then
-    echo "Waiting for broker to start..."
-    sleep 15
+    echo "Waiting for broker to start... 20 sec..."
+    sleep 20
     echo "... done. Start components..."
 fi
 
