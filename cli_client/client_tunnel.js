@@ -30,9 +30,9 @@ function str2buf(str) {
 }
 
 function main() {
-    portNo = '50000';
+    portNo = '60000';
     if (process.argv.length >= 3) {
-        portNo = '5000' + process.argv[2];
+        portNo = '6000' + process.argv[2];
     }
 
 

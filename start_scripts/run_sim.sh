@@ -10,4 +10,4 @@ printf "\e]2;$tabTitle\a"
 
 # Start the simulator
 echo "Starting simulator $1"
-node tpsys_sim.js $1
+node tpsys_sim_tunnel-mqtt.js $1

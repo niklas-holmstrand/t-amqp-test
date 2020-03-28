@@ -4,8 +4,7 @@
  */
 var readline = require('readline');
 
-////////////// gRPC tunnel stuff ////////////////////////////
-var PROTO_PATH = '../tunnel.proto';
+var PROTO_PATH = './tpcp0.proto';
 
 var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
@@ -18,48 +17,11 @@ var packageDefinition = protoLoader.loadSync(
         defaults: true,
         oneofs: true
     });
-var myProto = grpc.loadPackageDefinition(packageDefinition).tunnel;
+var myProto = grpc.loadPackageDefinition(packageDefinition).tpcp0;
 
-
-////////////////// mqtt for subscriptions /////////////////////////
-
-const mqtt = require('mqtt')
-var mqttClient = null;
-
-function emitProductionEngineStatus() {
-    var topic = "factory/PnP/Machines/" + machineId + '/State/ProductionEngine';
-    mqttClient.publish( topic, JSON.stringify(myProductionEngine), 
-        {retain: true}, (err) => {
-        if (err) { console.log('tpsys_sim: mqtt publish pe err:', err);} 
-    })
-    //subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myProductionEngine)));
-}
-
-function emitNotificationStatus() {
-    var topic = "factory/PnP/Machines/" + machineId + '/State/Notifications';
-    mqttClient.publish( topic, JSON.stringify(myNotifications), 
-        {retain: true}, (err) => {
-        if (err) { console.log('tpsys_sim: mqtt publish not err:', err);} 
-    })
-    // var key = "factory.PnP.Machines." + machineId + '.Notifications';
-    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
-}
-function emitMagasineStatus() {
-    var topic = "factory/PnP/Machines/" + machineId + '/State/ComponentLoading';
-    mqttClient.publish( topic, JSON.stringify(myMagSlots), 
-        {retain: true}, (err) => {
-        if (err) { console.log('tpsys_sim: mqtt publish cl err:', err);} 
-    })
-    // var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
-    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
-}
-
-///////////////////////////////////////////
-
-
-var prodEngineSubscription = true;
-var magSubscription = true;
-var notSubscription = true;
+var prodEngineSubscription = null;
+var magSubscription = null;
+var notSubscription = null;
 var cameraImagesSubscription = null;
 
 var fs = require('fs');
@@ -112,391 +74,196 @@ var imageFeederObj = {
 
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
-const tpcp_schema = require("./tpcp_pb");
-var heartBeatSubscription;
 
-function subscribeHeartBeats(call, callback) {
-    console.log('subscribeHeartBeats');
-    heartBeatSubscription = call;
-    heartBeatSubscription.write('bomp');
+function getProdEngineStatus(call, callback) {
+    console.log("GetProdEngineStatus")
+    callback(null, myProductionEngine);
 }
-function heartBeat() {
-    setTimeout(heartBeat, 500);
-    if(heartBeatSubscription) {
-        heartBeatSubscription.write('bomp');
+
+function getMagazineStatus(call, callback) {
+    console.log("GetMagazineStatus")
+    const msg = { magSlots: myMagSlots }
+    callback(null, msg);
+}
+
+function getNotificationStatus(call, callback) {
+    console.log("getNotificationStatus")
+    const msg = { notifications: myNotifications }
+    callback(null, msg);
+}
+
+function getImageFromFeeder(call, callback) {
+  console.log("getImageFromFeeder");
+
+  let originalImage = "./resources/reference.jpg";
+
+  sharp(originalImage)
+    .extract({
+      width: 500,
+      height: 500,
+      left: 800,
+      top: 750
+    })
+    .toBuffer()
+    .then(buffer => {
+        const msg = {
+          feederImgBase64: `data:image/png;base64,${buffer.toString("base64")}`,
+          x: 800,
+          y: 750
+        };
+        callback(null, msg);
     }
+    );
 }
-setTimeout(heartBeat, 500);
 
-function handleCmd(call, callback) {
-    const tpcpRsp = new tpcp_schema.TpcpRsp();
+function getImageFromFeederOffset(call, callback) {
+  console.log("getImageFromFeederOffset");
 
-    // Unpack tpcp envelop
-    bytesStr = call.request.requestMsg;
-    bytes = new Uint8Array(bytesStr.split(",")); // Convert string (protobuff payload) to something deseializable
-    const tpcpCmd = tpcp_schema.TpcpCmd.deserializeBinary(bytes);
+  const referenceLeft = 800;
+  const referenceTop = 750;
 
-    console.log("Got cmd:", tpcpCmd.getMsgtype());
-    tpcpRsp.setMsgtype(tpcpCmd.getMsgtype()); // Copy message type to response to not have to do it for all cases
+  const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
+  const newTop =  call.request.y > 0 ? call.request.y : referenceTop;
 
-    switch(tpcpCmd.getMsgtype()) {
-        case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
-            const cmdStartBatch = tpcpCmd.getCmdstartbatch();
-            rspStartBatch = handleStartBatch(cmdStartBatch);
-            tpcpRsp.setRspstartbatch(rspStartBatch);
-            break;
+  nxGl = newLeft;
+  //refLeft = refLeft + newLeft;
 
-        case tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
-            const cmdGetProductionEngineStatus = tpcpCmd.getCmdgetproductionenginestatus();
-            rspGetProductionEngineStatus = handleGetProdEngineStatus(cmdGetProductionEngineStatus);
-            tpcpRsp.setRspgetproductionenginestatus(rspGetProductionEngineStatus);
-            break;
+  console.log(`new left je: ${newLeft}`);
 
-        case tpcp_schema.TpcpMsgType.PAUSETYPE:
-            const cmdPause = tpcpCmd.getCmdpause();
-            rspPause = handlePause(cmdPause);
-            tpcpRsp.setRsppause(rspPause);
-            break;
+  let originalImage = "./resources/reference.jpg";
 
-        case tpcp_schema.TpcpMsgType.PLAYTYPE:
-            const cmdPlay = tpcpCmd.getCmdplay();
-            rspPlay = handlePlay(cmdPlay);
-            tpcpRsp.setRspplay(rspPlay);
-            break;
-    
-        case tpcp_schema.TpcpMsgType.STOPTYPE:
-            const cmdStop = tpcpCmd.getCmdstop();
-            rspStop = handleStop(cmdStop);
-            tpcpRsp.setRspstop(rspStop);
-            break;
-
-        case tpcp_schema.TpcpMsgType.SUBSPETYPE:
-            const cmdSubsPe = tpcpCmd.getCmdsubspe();
-            rspSubsPe = handleSubsPe(cmdSubsPe);
-            tpcpRsp.setRspsubspe(rspSubsPe);
-            break;
-
-        case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:
-            const cmdSubsMagazineStatus = tpcpCmd.getCmdsubsmagazinestatus();
-            rspSubsMagazineStatus = handleSubsMagazineStatus(cmdSubsMagazineStatus);
-            tpcpRsp.setRspsubsmagazinestatus(rspSubsMagazineStatus);
-            break;
-
-        case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:
-            const cmdSubsNotificationStatus = tpcpCmd.getCmdsubsnotificationstatus();
-            rspSubsNotificationStatus = handleSubsNotificationStatus(cmdSubsNotificationStatus);
-            tpcpRsp.setRspsubsnotificationstatus(rspSubsNotificationStatus);
-            break;
-                        
-        case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:
-            const cmdNqrLoadBoard = tpcpCmd.getCmdnqrloadboard();
-            rspNqrLoadBoard = handleNqrLoadBoard(cmdNqrLoadBoard);
-            tpcpRsp.setRspnqrloadboard(rspNqrLoadBoard);
-            break;
-                        
-        default:
-            console.log("Unknown cmd:", tpcpCmd.getMsgtype());
-            process.exit(-1);
+  sharp(originalImage)
+    .extract({
+      width: 500,
+      height: 500,
+      left: newLeft,
+      top: newTop
+    })
+    .toBuffer()
+    .then(buffer => {
+        console.log(`after crop`)
+        const msg = {
+          feederImgBase64: `data:image/jpg;base64,${buffer.toString("base64")}`,
+          x: newLeft,
+          y: newTop
+        };
+        callback(null, msg);
     }
-
-    // send response
-    console.log("Sending rsp:", tpcpRsp.getMsgtype());
-    bytesStr = tpcpRsp.serializeBinary().toString();
-    return callback(null, { responseMsg: bytesStr });
+    );
 }
 
+function moveCamX(call, callback) {
+  console.log("moveCamX");
 
-function handleStartBatch(cmdStartBatch) {
-    // Create response
-    const rspStartBatch = new tpcp_schema.RspStartBatch();
-    rspStartBatch.setErrcode(-1);
-    rspStartBatch.setErrmsg("NotAssigned");
+  const referenceLeft = 800;
 
-    console.log("Got StartBatch")
-    console.log("Layout name:", cmdStartBatch.getLayoutname())
-    console.log("Batch size:", cmdStartBatch.getBatchsize())
-    console.log("Batch id:", cmdStartBatch.getBatchid())
+  const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
 
+  nxGl = newLeft;
+  callback(null, { result: true });
+}
+
+function cmdStartBatch(call, callback) {
     if (myProductionEngine.state != 'Stopped') {
-        rspStartBatch.setErrcode(-1);
-        rspStartBatch.setErrmsg('Not allowed in current state');
-        return rspStartBatch;
+        return callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
     }
 
     myProductionEngine.state = 'Paused';
-    myProductionEngine.batchId = cmdStartBatch.getBatchid();
-    myProductionEngine.layoutName = cmdStartBatch.getLayoutname();
-    myProductionEngine.batchSize = cmdStartBatch.getBatchsize();
+    myProductionEngine.batchId = call.request.batchId;
+    myProductionEngine.layoutName = call.request.layoutName;
+    myProductionEngine.batchSize = call.request.batchSize;
 
     myProductionEngine.boardsCompleted = 0;
     myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
 
-    rspStartBatch.setErrcode(0);
-    rspStartBatch.setErrmsg("ok");
-    return rspStartBatch;
+    return callback(null, { errCode: 0, errMsg: '' });
 }
 
-
-function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
-    console.log("GetProdEngineStatus")
-    const rspGetProductionEngineStatus = new tpcp_schema.RspGetProductionEngineStatus();
-
-    switch(myProductionEngine.state) {
-        case 'Stopped': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.STOPPED); break;
-        case 'Paused': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.PAUSED); break;
-        case 'Running': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.RUNNING); break;
-        default: rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.UNKNOWN); break;
-    }
-    rspGetProductionEngineStatus.setBatchid(myProductionEngine.batchId);
-    rspGetProductionEngineStatus.setLayoutname(myProductionEngine.layoutName);
-    rspGetProductionEngineStatus.setBatchsize(myProductionEngine.batchSize);
-    rspGetProductionEngineStatus.setBoardscompleted(myProductionEngine.boardsCompleted);
-    rspGetProductionEngineStatus.setComponentsperboard(myProductionEngine.componentsPerBoard);
-    rspGetProductionEngineStatus.setComponentsleft(myProductionEngine.componentsLeft);
-    rspGetProductionEngineStatus.setComponentsmissing(myProductionEngine.componentsMissing);
-  
-    return rspGetProductionEngineStatus;
-}
-
-function handlePause(cmdPause) {
-    const rspPause = new tpcp_schema.RspPause();
-    rspPause.setErrcode(-1);
-    rspPause.setErrmsg("NotAssigned");
-
-    if (myProductionEngine.state != 'Running') {
-        rspPause.setErrcode(-1);
-        rspPause.setErrmsg('Not allowed in current state');
-        return rspPause;NotificationStatus
-    }
-
-    console.log("Pausing")
-    myProductionEngine.state = 'Paused';
-
-    rspPause.setErrcode(0);
-    rspPause.setErrmsg("ok");
-    return rspPause;
-}
-
-function handlePlay() {
-    const rspPlay = new tpcp_schema.RspPlay();
-    rspPlay.setErrcode(-1);
-    rspPlay.setErrmsg("NotAssigned");
-
+function cmdPlay(call, callback) {
     if (myProductionEngine.state != 'Paused') {
-        rspPlay.setErrcode(-1);
-        rspPlay.setErrmsg('Not allowed in current state');
-        return rspPlay;
+        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+        return;
     }
 
-    console.log("Play...");
     myProductionEngine.state = 'Running';
-
-    rspPlay.setErrcode(0);
-    rspPlay.setErrmsg("ok");
-    return rspPlay;
+    callback(null, { errCode: 0, errMsg: '' });
+    return;
 }
 
-function handleStop() {
-    const rspStop = new tpcp_schema.RspStop();
-    rspStop.setErrcode(-1);
-    rspStop.setErrmsg("NotAssigned");
-
-    if (myProductionEngine.state != 'Paused') {
-        rspStop.setErrcode(-1);
-        rspStop.setErrmsg('Not allowed in current state');
-        return rspStop;
+function cmdPause(call, callback) {
+    if (myProductionEngine.state != 'Running') {
+        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+        return;
     }
 
-    console.log("Stop");
+    myProductionEngine.state = 'Paused';
+    callback(null, { errCode: 0, errMsg: '' });
+}
+
+function cmdStop(call, callback) {
+    if (myProductionEngine.state != 'Paused') {
+        callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
+        return;
+    }
+
     myProductionEngine.state = 'Stopped';
     myProductionEngine.batchId = '';
     myProductionEngine.layoutName = '';
     myProductionEngine.batchSize = 0;
-
-    rspStop.setErrcode(0);
-    rspStop.setErrmsg("ok");
-    return rspStop;
+    callback(null, { errCode: 0, errMsg: '' });
 }
 
-function handleSubsPe() {
-    const rspSubsPe = new tpcp_schema.RspSubsPe();
-    rspSubsPe.setErrcode(-1);
-    rspSubsPe.setErrmsg("NotAssigned");
+function cmdNqrLoadBoard(call, callback) {
 
-
-    console.log("SubsPe");
-    prodEngineSubscription = true;
-    emitProductionEngineStatus();
-
-    rspSubsPe.setErrcode(0);
-    rspSubsPe.setErrmsg("ok");
-    return rspSubsPe;
-}
-
-function handleSubsMagazineStatus() {
-    const rspSubsMagazineStatus = new tpcp_schema.RspSubsMagazineStatus();
-    rspSubsMagazineStatus.setErrcode(-1);
-    rspSubsMagazineStatus.setErrmsg("NotAssigned");
-
-
-    console.log("SubsMagazineStatus");
-    magSubscription = true;
-    emitMagasineStatus();
-
-    rspSubsMagazineStatus.setErrcode(0);
-    rspSubsMagazineStatus.setErrmsg("ok");
-    return rspSubsMagazineStatus;
-}
-
-function handleSubsNotificationStatus() {
-    const rspSubsNotificationStatus = new tpcp_schema.RspSubsNotificationStatus();
-    rspSubsNotificationStatus.setErrcode(-1);
-    rspSubsNotificationStatus.setErrmsg("NotAssigned");
-
-
-    console.log("SubsNotificationStatus");
-    notSubscription = true;
-    emitNotificationStatus();
-
-    rspSubsNotificationStatus.setErrcode(0);
-    rspSubsNotificationStatus.setErrmsg("ok");
-    return rspSubsNotificationStatus;
-}
-
-function handleNqrLoadBoard(cmdNqrLoadBoard) {
-    const rspNqrLoadBoard = new tpcp_schema.RspNqrLoadBoard();
-    rspNqrLoadBoard.setErrcode(-1);
-    rspNqrLoadBoard.setErrmsg("NotAssigned");
-
-
-    console.log("NqrLoadBoard ok:", cmdNqrLoadBoard.getOk());
     if(waitingForBoard) {
         waitingForBoard = false;
         removeNotification(100);
 
-        if(cmdNqrLoadBoard.getOk()) {
+        if(call.request.ok) {
             console.log('Board loaded')
         } else {
             console.log('Board not loaded, pause')
             myProductionEngine.state = 'Paused';
         }
-    }
 
-    rspNqrLoadBoard.setErrcode(0);
-    rspNqrLoadBoard.setErrmsg("ok");
-    return rspNqrLoadBoard;
+    } else {
+        console.log('unexpected CmdNqrLoadBoard')
+        callback(null, { errCode: -1, errMsg: 'Unexpected CmdNqrLoadBoard' });
+        return;
+    }
+    callback(null, { errCode: 0, errMsg: '' });
 }
 
 
-// function getMagazineStatus(call, callback) {
-//     console.log("GetMagazineStatus")
-//     const msg = { magSlots: myMagSlots }
-//     callback(null, msg);
-// }
 
-// function getNotificationStatus(call, callback) {
-//     console.log("getNotificationStatus")
-//     const msg = { notifications: myNotifications }
-//     callback(null, msg);
-// }
+function subscribeProdEngineStatus(call, callback) {
+    console.log('subs PE');
+    prodEngineSubscription = call;
+    prodEngineSubscription.write(myProductionEngine);
+}
 
-// function getImageFromFeeder(call, callback) {
-//   console.log("getImageFromFeeder");
+function subscribeMagazineStatus(call, callback) {
+    console.log('subs mags');
+    magSubscription = call;
 
-//   let originalImage = "./resources/reference.jpg";
+    const msg = { magSlots: myMagSlots }
+    magSubscription.write(msg);
+}
 
-//   sharp(originalImage)
-//     .extract({
-//       width: 500,
-//       height: 500,
-//       left: 800,
-//       top: 750
-//     })
-//     .toBuffer()
-//     .then(buffer => {
-//         const msg = {
-//           feederImgBase64: `data:image/png;base64,${buffer.toString("base64")}`,
-//           x: 800,
-//           y: 750
-//         };
-//         callback(null, msg);
-//     }
-//     );
-// }
+function subscribeNotificationStatus(call, callback) {
+    console.log('subs notif');
+    notSubscription = call;
 
-// function getImageFromFeederOffset(call, callback) {
-//   console.log("getImageFromFeederOffset");
+    const msg = { notifications: myNotifications }
+    notSubscription.write(msg);
+}
 
-//   const referenceLeft = 800;
-//   const referenceTop = 750;
+function subscribeCameraImages(call, callback) {
+    console.log('subs subscribeCameraImages');
+    cameraImagesSubscription = call;
 
-//   const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
-//   const newTop =  call.request.y > 0 ? call.request.y : referenceTop;
-
-//   nxGl = newLeft;
-//   //refLeft = refLeft + newLeft;
-
-//   console.log(`new left je: ${newLeft}`);
-
-//   let originalImage = "./resources/reference.jpg";
-
-//   sharp(originalImage)
-//     .extract({
-//       width: 500,
-//       height: 500,
-//       left: newLeft,
-//       top: newTop
-//     })
-//     .toBuffer()
-//     .then(buffer => {
-//         console.log(`after crop`)
-//         const msg = {
-//           feederImgBase64: `data:image/jpg;base64,${buffer.toString("base64")}`,
-//           x: newLeft,
-//           y: newTop
-//         };
-//         callback(null, msg);
-//     }
-//     );
-// }
-
-// function moveCamX(call, callback) {
-//   console.log("moveCamX");
-
-//   const referenceLeft = 800;
-
-//   const newLeft = call.request.x > 0 ? call.request.x : referenceLeft;
-
-//   nxGl = newLeft;
-//   callback(null, { result: true });
-// }
-
-// function cmdStartBatch(call, callback) {
-//     if (myProductionEngine.state != 'Stopped') {
-//         return callback(null, { errCode: -1, errMsg: 'Not allowed in current state' });
-//     }
-
-//     myProductionEngine.state = 'Paused';
-//     myProductionEngine.batchId = call.request.batchId;
-//     myProductionEngine.layoutName = call.request.layoutName;
-//     myProductionEngine.batchSize = call.request.batchSize;
-
-//     myProductionEngine.boardsCompleted = 0;
-//     myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
-
-//     return callback(null, { errCode: 0, errMsg: '' });
-// }
-
-
-
-
-
-// function subscribeCameraImages(call, callback) {
-//     console.log('subs subscribeCameraImages');
-//     cameraImagesSubscription = call;
-
-//     sendFeederImage();
-// }
+    sendFeederImage();
+}
 
 /////////////////////////////////////// Add / remove notifications /////////////////////////////////////////
 function addNotification(newNot) {
@@ -519,7 +286,7 @@ var prevMagStateJsonStr = null;
 var prevNotStateJsonStr = null;
 
 function quick() {
-    setTimeout(quick, 300);
+    setTimeout(quick, 200);
     // IF mag 4 is disabled, simulate missing components
     if(myMagSlots[4].state === 'Present' || myMagSlots[4].state === 'Empty') {
         myProductionEngine.componentsMissing = 25;
@@ -578,10 +345,15 @@ function quick() {
         prevPeStateJsonStr = productionEngineJsonStr;
 
         if (prodEngineSubscription) {
-            emitProductionEngineStatus()
+            writeOk = prodEngineSubscription.write(myProductionEngine);
+            if (!writeOk) {
+                prodEngineSubscription = null; // assume client is disconnected
+                console.log('PeSubs write fail, turn off');
+            }
         }
     }
-    
+
+
     //
     // Report any changes in Notification to any subscriber
     // Very ugly string comparsion due to problems comparing/cloning arrays. ToBeImproved.
@@ -591,7 +363,12 @@ function quick() {
         prevNotStateJsonStr = notificationJsonStr;
 
         if (notSubscription) {
-            emitNotificationStatus()
+            const msg = { notifications: myNotifications }
+            writeOk = notSubscription.write(msg);
+            if (!writeOk) {
+                notSubscription = null; // assume client is disconnected
+                console.log('Not write fail, turn off');
+            }
         }
     }
 
@@ -605,7 +382,13 @@ function quick() {
         prevMagStateJsonStr = magJsonStr
 
         if (magSubscription) {
-            emitMagasineStatus()
+            console.log('MagSubs write');
+            const msg = { magSlots: myMagSlots }
+            writeOk = magSubscription.write(msg);
+            if (!writeOk) {
+                magSubscription = null; // assume client is disconnected
+                console.log('MagSubs write fail, turn off');
+            }
         }
     }
 
@@ -770,45 +553,29 @@ function startImageStream() {
  * Starts an RPC server that receives requests for the Greeter service at the
  * sample server port
  */
-machineId = '0';
 function main() {
     portNo = '50000';
     if (process.argv.length >= 3) {
-        machineId = process.argv[2];
+        portNo = '5000' + process.argv[2];
     }
 
-    //
-    // mqtt connection
-    //
-    const TCP_URL = 'mqtt://localhost:1883'
-    const TCP_TLS_URL = 'mqtts://localhost:8883'
-
-    const options = {
-        connectTimeout: 4000,
-
-        // Authentication
-        clientId: 'PP-machine'+ machineId,
-        // username: 'emqx',
-        // password: 'emqx',
-
-        keepalive: 60,
-        clean: true,
-    }
-
-    mqttClient = mqtt.connect(TCP_URL, options)
-    mqttClient.on('connect', () => {
-        console.log('MQTT connected')
-    })
-  
-
-    //
-    // gRPC connection
-    //
-    portNo = '5000' + machineId;
     var server = new grpc.Server();
-    server.addService(myProto.TunnelService.service, {
-        message: handleCmd,
-        subscribeHeartBeats: subscribeHeartBeats
+    server.addService(myProto.TPSysService.service, {
+        getProdEngineStatus: getProdEngineStatus,
+        getMagazineStatus: getMagazineStatus,
+        getNotificationStatus: getNotificationStatus,
+        getImageFromFeeder: getImageFromFeeder,
+        getImageFromFeederOffset: getImageFromFeederOffset,
+        cmdPlay: cmdPlay,
+        cmdStop: cmdStop,
+        cmdPause: cmdPause,
+        cmdStartBatch: cmdStartBatch,
+        cmdNqrLoadBoard: cmdNqrLoadBoard,
+        subscribeMagazineStatus: subscribeMagazineStatus,
+        subscribeProdEngineStatus: subscribeProdEngineStatus,
+        subscribeNotificationStatus: subscribeNotificationStatus,
+        subscribeCameraImages: subscribeCameraImages,
+        moveCamX: moveCamX
     });
     server.bind('0.0.0.0:' + portNo, grpc.ServerCredentials.createInsecure());
     server.start();
@@ -816,7 +583,7 @@ function main() {
     //startImageStream();
 
 
-    console.log("tpsys_sim server started, gRPC port: ", portNo)
+    console.log("server started, port: ", portNo)
     setTimeout(quick, 100);
     setTimeout(startImageStream, 1000);
 }
