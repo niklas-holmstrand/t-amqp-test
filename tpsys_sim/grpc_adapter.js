@@ -51,6 +51,7 @@ const mqtt = require('mqtt')
 var mqttClient = null;
 
 function emitProductionEngineStatus(peState) {
+    //process.stdout.write('.');
     var topic = "factory/PnP/Machines/" + machineId + '/State/ProductionEngine';
     mqttClient.publish( topic, JSON.stringify(peState), 
         {retain: true}, (err) => {
@@ -59,23 +60,21 @@ function emitProductionEngineStatus(peState) {
 }
 
 function emitNotificationStatus(notState) {
+    //process.stdout.write('N');
     var topic = "factory/PnP/Machines/" + machineId + '/State/Notifications';
     mqttClient.publish( topic, JSON.stringify(notState.notifications), 
         {retain: true}, (err) => {
         if (err) { console.log('tpsys_sim: mqtt publish not err:', err);} 
     })
-    // var key = "factory.PnP.Machines." + machineId + '.Notifications';
-    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myNotifications)));
 }
 
 function emitMagasineStatus(magState) {
-            var topic = "factory/PnP/Machines/" + machineId + '/State/ComponentLoading';
-    mqttClient.publish( topic, JSON.stringify(magState), 
+    //process.stdout.write('M');
+    var topic = "factory/PnP/Machines/" + machineId + '/State/ComponentLoading';
+    mqttClient.publish( topic, JSON.stringify(magState.magSlots), 
         {retain: true}, (err) => {
         if (err) { console.log('tpsys_sim: mqtt publish cl err:', err);} 
     })
-    // var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
-    // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
 }
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
@@ -219,7 +218,6 @@ async function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
             case 'Running': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.RUNNING); break;
             default: rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.UNKNOWN); break;
         }
-//        rspGetProductionEngineStatus.setState(val.state);
         rspGetProductionEngineStatus.setBatchid(val.batchId);
         rspGetProductionEngineStatus.setLayoutname(val.layoutName);
         rspGetProductionEngineStatus.setBatchsize(val.batchSize);
@@ -288,15 +286,24 @@ async function handleStop() {
     return rspStop;
 }
 
+var subsPeChannel = null;
 async function handleSubsPe() {
     const rspSubsPe = new tpcp_schema.RspSubsPe();
     rspSubsPe.setErrcode(-1);
     rspSubsPe.setErrmsg("NotAssigned");
 
+    // if already someone subscribing ignore
+    if(subsPeChannel) {
+        rspSubsPe.setErrcode(0);
+        rspSubsPe.setErrmsg("gRPC adapter, ignored subscription. Already active");
+        console.log("Ignore and shortcut subsPe");
+        return rspSubsPe;
+    }
     p = new Promise( (resolve, reject) => {
-        tpcp0Client.subscribeProdEngineStatus({}, function (err, response) {
+        subsPeChannel = tpcp0Client.subscribeProdEngineStatus({}, function (err, response) {
             resolve(response);
         });
+        subsPeChannel.on("data", emitProductionEngineStatus);
     });
     p.then(val => {
         rspSubsPe.setErrcode(val.errCode);
@@ -307,35 +314,55 @@ async function handleSubsPe() {
     return rspSubsPe;
 }
 
+var subsMagCannel = null;
 async function handleSubsMagazineStatus() {
     const rspSubsMagazineStatus = new tpcp_schema.RspSubsMagazineStatus();
     rspSubsMagazineStatus.setErrcode(-1);
     rspSubsMagazineStatus.setErrmsg("NotAssigned");
 
+    // if already someone subscribing ignore
+    if(subsMagCannel) {
+        rspSubsMagazineStatus.setErrcode(0);
+        rspSubsMagazineStatus.setErrmsg("gRPC adapter, ignored subscription. Already active");
+        console.log("Ignore and shortcut subsMag");
+        return rspSubsMagazineStatus;
+    }
     p = new Promise( (resolve, reject) => {
-        tpcp0Client.subscribeMagazineStatus({}, function (err, response) {
+        subsMagCannel = tpcp0Client.subscribeMagazineStatus({}, function (err, response) {
             resolve(response);
+            reject(err);
         });
+        subsMagCannel.on("data", emitMagasineStatus);
     });
     p.then(val => {
         rspSubsMagazineStatus.setErrcode(val.errCode);
         rspSubsMagazineStatus.setErrmsg(val.errMsg);
+    });
+    p.catch(val => {
+        console.log('Subs mag error: ', val);
     });
     await p;
 
     return rspSubsMagazineStatus;
 }
 
+var subsNotChannel = null;
 async function handleSubsNotificationStatus() {
     const rspSubsNotificationStatus = new tpcp_schema.RspSubsNotificationStatus();
     rspSubsNotificationStatus.setErrcode(-1);
     rspSubsNotificationStatus.setErrmsg("NotAssigned");
 
-
+    if(subsNotChannel) {
+        rspSubsNotificationStatus.setErrcode(0);
+        rspSubsNotificationStatus.setErrmsg("gRPC adapter, ignored subscription. Already active");
+        console.log("Ignore and shortcut subsNot");
+        return rspSubsNotificationStatus;
+    }
     p = new Promise( (resolve, reject) => {
-        tpcp0Client.subscribeNotificationStatus({}, function (err, response) {
+        subsNotChannel= tpcp0Client.subscribeNotificationStatus({}, function (err, response) {
             resolve(response);
         });
+        subsNotChannel.on("data", emitNotificationStatus);
     });
     p.then(val => {
         rspSubsNotificationStatus.setErrcode(val.errCode);
@@ -379,23 +406,24 @@ async function handleNqrLoadBoard(cmdNqrLoadBoard) {
   
 machineId = '0';
 async function main() {
-    portNo = '50000';
     if (process.argv.length >= 3) {
         machineId = process.argv[2];
     }
 
+    portNo = '5000' + machineId;
     tpcp0Client = new tpcp_proto.TPSysService('localhost:' + portNo,
         grpc.credentials.createInsecure());
 
     //
-    // Subscribe all status and relay to MQTT publishing
+    // Subscribe all status and relay to MQTT publishing (could also be done on subscmd)
     //
-    subsPeChannel = tpcp0Client.subscribeProdEngineStatus({});
-    subsPeChannel.on("data", emitProductionEngineStatus);
-    channel2 = tpcp0Client.subscribeMagazineStatus({});
-    channel2.on("data", emitMagasineStatus);
-    channel3 = tpcp0Client.subscribeNotificationStatus({});
-    channel3.on("data", emitNotificationStatus);
+    // console.log('Setup subscriptions', portNo)
+    // subsPeChannel = tpcp0Client.subscribeProdEngineStatus({});
+    // subsPeChannel.on("data", emitProductionEngineStatus);
+    // subsMagCannel = tpcp0Client.subscribeMagazineStatus({});
+    // subsMagCannel.on("data", emitMagasineStatus);
+    // subsMagCannel = tpcp0Client.subscribeNotificationStatus({});
+    // subsMagCannel.on("data", emitNotificationStatus);
         
     //
     // mqtt connection
@@ -436,7 +464,7 @@ async function main() {
     //startImageStream();
 
 
-    console.log("tpsys_sim server started, gRPC port: ", portNo)
+    console.log("gRPC adapter started, gRPC port to resmgr: ", portNo)
     // setTimeout(quick, 100);
     // setTimeout(startImageStream, 1000);
 }

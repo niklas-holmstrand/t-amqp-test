@@ -20,13 +20,15 @@ fi
 # Start factory configuration datasource
 gnome-terminal --tab -- start_scripts/run_facdata.sh
 
+
 # simulators and their resource magagers
-gnome-terminal --tab -- start_scripts/run_sim.sh 0
-gnome-terminal --tab -- start_scripts/run_resmgr.sh 0
-gnome-terminal --tab -- start_scripts/run_sim.sh 1
-gnome-terminal --tab -- start_scripts/run_resmgr.sh 1
-gnome-terminal --tab -- start_scripts/run_sim.sh 2
-gnome-terminal --tab -- start_scripts/run_resmgr.sh 2
+#nMachines=3
+for i in {0..2}
+do
+    echo "Starting machine $i"
+    gnome-terminal --tab -- start_scripts/run_sim.sh "$i"
+    gnome-terminal --tab -- start_scripts/run_resmgr.sh "$i"
+done
 
 # Let machines start before starting GUI provider
 sleep 1
