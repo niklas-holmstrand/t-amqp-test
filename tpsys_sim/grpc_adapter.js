@@ -21,16 +21,11 @@ var tpcp0Client;
 
 
 
-
-
-/////////////////////////////////// end tpcp0 ////////////////////////////////////////////////////
-
-/*
- *
- */
-//var readline = require('readline');
-
-////////////// gRPC tunnel stuff ////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//
+// gRPC tunnel stuff
+//
+//
 var PROTO_PATH = '../tunnel.proto';
 
 var grpc = require('grpc');
@@ -47,8 +42,11 @@ var packageDefinition = protoLoader.loadSync(
 var myProto = grpc.loadPackageDefinition(packageDefinition).tunnel;
 
 
-////////////////// mqtt for subscriptions /////////////////////////
-
+////////////////////////////////////////////////////////////////////////////
+//
+// mqtt for subscriptions
+//
+//
 const mqtt = require('mqtt')
 var mqttClient = null;
 
@@ -62,7 +60,7 @@ function emitProductionEngineStatus(peState) {
 
 function emitNotificationStatus(notState) {
     var topic = "factory/PnP/Machines/" + machineId + '/State/Notifications';
-    mqttClient.publish( topic, JSON.stringify(notState), 
+    mqttClient.publish( topic, JSON.stringify(notState.notifications), 
         {retain: true}, (err) => {
         if (err) { console.log('tpsys_sim: mqtt publish not err:', err);} 
     })
@@ -79,63 +77,6 @@ function emitMagasineStatus(magState) {
     // var key = "factory.PnP.Machines." + machineId + '.ComponentLoading';
     // subscriptionAmqpChannel.publish(exchangeName, key, Buffer.from(JSON.stringify(myMagSlots)));
 }
-
-///////////////////////////////////////////
-
-
-// var prodEngineSubscription = true;
-// var magSubscription = true;
-// var notSubscription = true;
-// var cameraImagesSubscription = null;
-
-// var fs = require('fs');
-// const sharp = require('sharp');
-
-// ///////////////////////// Internal Machine state //////////////////////////////
-// let manaulBoardLoad = false;
-// let waitingForBoard = false;
-
-// ///////////////////////// Exported Machine state //////////////////////////////
-
-// var myProductionEngine = {
-//     state: 'Running',
-//     batchId: '23-76-aa',
-//     layoutName: 'Demo17',
-//     batchSize: 25,
-//     boardsCompleted: 0,
-//     componentsPerBoard: 252,
-//     componentsLeft: 130,
-//     componentsMissing: 0
-// };
-
-
-// var myMagSlots = [
-//     { state: 'Empty', name: '', slotNo: 1 },
-//     { state: 'Present', name: 'Kalle', slotNo: 2 },
-//     { state: 'NotYetPicked', name: 'AnnaKarin', slotNo: 3 },
-//     { state: 'NotYetPicked', name: 'Lotta', slotNo: 4 },
-//     { state: 'Used', name: 'Frida', slotNo: 8 },
-//     { state: 'Active', name: 'Oscar', slotNo: 9 },
-//     { state: 'Active', name: 'Viktor', slotNo: 10 },
-// ];
-
-// var myNotifications = [
-// //    { type: 'ComponentNotAvailable', severity: 'OperatorAlert', 
-// //    runtimeData: ['C0489', 'E-lyt 50 uF 25V', 'Tower0', '4'], id: 1 },
-// //    { type: 'ComponentNotAvailable', severity: 'OperatorAlert', 
-// //    runtimeData: ['C0855', 'Resist 6.8k', 'Tower1', '16'], id: 2 },
-// ];
-
-// var xGl = 800;
-// var nxGl = 800;
-// var refLeft = 800;
-
-// var imageFeederObj = {
-//   feederImgBase64: "obrazek",
-//   x: xGl,
-//   y: 5
-// };
-
 
 ////////////////////////////////// TpCp //////////////////////////////////////////////
 const tpcp_schema = require("./tpcp_pb");
@@ -167,14 +108,14 @@ async function handleCmd(call, callback) {
 
     switch(tpcpCmd.getMsgtype()) {
         case tpcp_schema.TpcpMsgType.STARTBATCHTYPE:
-            const cmdStartBatch = tpcpCmd.getCmdstartbatch();
-            rspStartBatch = handleStartBatch(cmdStartBatch);
+            var rspStartBatch;
+            await handleStartBatch(tpcpCmd.getCmdstartbatch()).then(val => {rspStartBatch = val;}) ;
             tpcpRsp.setRspstartbatch(rspStartBatch);
             break;
 
         case tpcp_schema.TpcpMsgType.GETPRODUCTIONENGINESTATUSTYPE:
-            const cmdGetProductionEngineStatus = tpcpCmd.getCmdgetproductionenginestatus();
-            rspGetProductionEngineStatus = handleGetProdEngineStatus(cmdGetProductionEngineStatus);
+            var rspGetProductionEngineStatus;
+            await handleGetProdEngineStatus(tpcpCmd.getCmdgetproductionenginestatus()).then(val => {rspGetProductionEngineStatus = val;}) ;
             tpcpRsp.setRspgetproductionenginestatus(rspGetProductionEngineStatus);
             break;
 
@@ -185,38 +126,38 @@ async function handleCmd(call, callback) {
             break;
 
         case tpcp_schema.TpcpMsgType.PLAYTYPE:
-            const cmdPlay = tpcpCmd.getCmdplay();
-            rspPlay = handlePlay(cmdPlay);
+            var rspPlay;
+            await handlePlay(tpcpCmd.getCmdplay()).then(val => {rspPlay = val;}) ;
             tpcpRsp.setRspplay(rspPlay);
             break;
     
         case tpcp_schema.TpcpMsgType.STOPTYPE:
-            const cmdStop = tpcpCmd.getCmdstop();
-            rspStop = handleStop(cmdStop);
+            var rspStop;
+            await handleStop(tpcpCmd.getCmdstop()).then(val => {rspStop = val;}) ;
             tpcpRsp.setRspstop(rspStop);
             break;
 
         case tpcp_schema.TpcpMsgType.SUBSPETYPE:
-            const cmdSubsPe = tpcpCmd.getCmdsubspe();
-            rspSubsPe = handleSubsPe(cmdSubsPe);
+            var rspSubsPe;
+            await handleSubsPe(tpcpCmd.getCmdsubspe()).then(val => {rspSubsPe = val;}) ;
             tpcpRsp.setRspsubspe(rspSubsPe);
             break;
 
         case tpcp_schema.TpcpMsgType.SUBSMAGAZINESTATUSTYPE:
-            const cmdSubsMagazineStatus = tpcpCmd.getCmdsubsmagazinestatus();
-            rspSubsMagazineStatus = handleSubsMagazineStatus(cmdSubsMagazineStatus);
+            var rspSubsMagazineStatus;
+            await handleSubsMagazineStatus(tpcpCmd.getCmdsubsmagazinestatus()).then(val => {rspSubsMagazineStatus = val;}) ;
             tpcpRsp.setRspsubsmagazinestatus(rspSubsMagazineStatus);
             break;
 
         case tpcp_schema.TpcpMsgType.SUBSNOTIFICATIONSTATUSTYPE:
-            const cmdSubsNotificationStatus = tpcpCmd.getCmdsubsnotificationstatus();
-            rspSubsNotificationStatus = handleSubsNotificationStatus(cmdSubsNotificationStatus);
+            var rspSubsNotificationStatus;
+            await handleSubsNotificationStatus(tpcpCmd.getCmdsubsnotificationstatus()).then(val => {rspSubsNotificationStatus = val;}) ;
             tpcpRsp.setRspsubsnotificationstatus(rspSubsNotificationStatus);
             break;
                         
         case tpcp_schema.TpcpMsgType.NQRLOADBOARDTYPE:
-            const cmdNqrLoadBoard = tpcpCmd.getCmdnqrloadboard();
-            rspNqrLoadBoard = handleNqrLoadBoard(cmdNqrLoadBoard);
+            var rspNqrLoadBoard;
+            await handleNqrLoadBoard(tpcpCmd.getCmdnqrloadboard()).then(val => {rspNqrLoadBoard = val;}) ;
             tpcpRsp.setRspnqrloadboard(rspNqrLoadBoard);
             break;
                         
@@ -232,8 +173,7 @@ async function handleCmd(call, callback) {
 }
 
 
-function handleStartBatch(cmdStartBatch) {
-    // Create response
+async function handleStartBatch(cmdStartBatch) {
     const rspStartBatch = new tpcp_schema.RspStartBatch();
     rspStartBatch.setErrcode(-1);
     rspStartBatch.setErrmsg("NotAssigned");
@@ -243,43 +183,52 @@ function handleStartBatch(cmdStartBatch) {
     console.log("Batch size:", cmdStartBatch.getBatchsize())
     console.log("Batch id:", cmdStartBatch.getBatchid())
 
-    if (myProductionEngine.state != 'Stopped') {
-        rspStartBatch.setErrcode(-1);
-        rspStartBatch.setErrmsg('Not allowed in current state');
-        return rspStartBatch;
-    }
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.cmdStartBatch({
+            batchId: cmdStartBatch.getBatchid(), 
+            layoutName: cmdStartBatch.getLayoutname(),  
+            batchSize: cmdStartBatch.getBatchsize()
+        }, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspStartBatch.setErrcode(val.errCode);
+        rspStartBatch.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    myProductionEngine.state = 'Paused';
-    myProductionEngine.batchId = cmdStartBatch.getBatchid();
-    myProductionEngine.layoutName = cmdStartBatch.getLayoutname();
-    myProductionEngine.batchSize = cmdStartBatch.getBatchsize();
-
-    myProductionEngine.boardsCompleted = 0;
-    myProductionEngine.componentsLeft = myProductionEngine.componentsPerBoard;
-
-    rspStartBatch.setErrcode(0);
-    rspStartBatch.setErrmsg("ok");
     return rspStartBatch;
 }
 
 
-function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
+async function handleGetProdEngineStatus(cmdGetProductionEngineStatus) {
     console.log("GetProdEngineStatus")
     const rspGetProductionEngineStatus = new tpcp_schema.RspGetProductionEngineStatus();
 
-    switch(myProductionEngine.state) {
-        case 'Stopped': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.STOPPED); break;
-        case 'Paused': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.PAUSED); break;
-        case 'Running': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.RUNNING); break;
-        default: rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.UNKNOWN); break;
-    }
-    rspGetProductionEngineStatus.setBatchid(myProductionEngine.batchId);
-    rspGetProductionEngineStatus.setLayoutname(myProductionEngine.layoutName);
-    rspGetProductionEngineStatus.setBatchsize(myProductionEngine.batchSize);
-    rspGetProductionEngineStatus.setBoardscompleted(myProductionEngine.boardsCompleted);
-    rspGetProductionEngineStatus.setComponentsperboard(myProductionEngine.componentsPerBoard);
-    rspGetProductionEngineStatus.setComponentsleft(myProductionEngine.componentsLeft);
-    rspGetProductionEngineStatus.setComponentsmissing(myProductionEngine.componentsMissing);
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.getProdEngineStatus({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        console.log('Got pe', val);
+        switch(val.state) {
+            case 'Stopped': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.STOPPED); break;
+            case 'Paused': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.PAUSED); break;
+            case 'Running': rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.RUNNING); break;
+            default: rspGetProductionEngineStatus.setState(tpcp_schema.ProductionEngineState.UNKNOWN); break;
+        }
+//        rspGetProductionEngineStatus.setState(val.state);
+        rspGetProductionEngineStatus.setBatchid(val.batchId);
+        rspGetProductionEngineStatus.setLayoutname(val.layoutName);
+        rspGetProductionEngineStatus.setBatchsize(val.batchSize);
+        rspGetProductionEngineStatus.setBoardscompleted(val.boardsCompleted);
+        rspGetProductionEngineStatus.setComponentsperboard(val.componentsPerBoard);
+        rspGetProductionEngineStatus.setComponentsleft(val.componentsLeft);
+        rspGetProductionEngineStatus.setComponentsmissing(val.componentsMissing);
+    });
+    await p;
   
     return rspGetProductionEngineStatus;
 }
@@ -301,113 +250,118 @@ async function handlePause(cmdPause) {
     return rspPause;
 }
 
-function handlePlay() {
+async function handlePlay() {
     const rspPlay = new tpcp_schema.RspPlay();
     rspPlay.setErrcode(-1);
     rspPlay.setErrmsg("NotAssigned");
 
-    if (myProductionEngine.state != 'Paused') {
-        rspPlay.setErrcode(-1);
-        rspPlay.setErrmsg('Not allowed in current state');
-        return rspPlay;
-    }
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.cmdPlay({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspPlay.setErrcode(val.errCode);
+        rspPlay.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    console.log("Play...");
-    myProductionEngine.state = 'Running';
-
-    rspPlay.setErrcode(0);
-    rspPlay.setErrmsg("ok");
     return rspPlay;
 }
 
-function handleStop() {
+async function handleStop() {
     const rspStop = new tpcp_schema.RspStop();
     rspStop.setErrcode(-1);
     rspStop.setErrmsg("NotAssigned");
 
-    if (myProductionEngine.state != 'Paused') {
-        rspStop.setErrcode(-1);
-        rspStop.setErrmsg('Not allowed in current state');
-        return rspStop;
-    }
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.cmdStop({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspStop.setErrcode(val.errCode);
+        rspStop.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    console.log("Stop");
-    myProductionEngine.state = 'Stopped';
-    myProductionEngine.batchId = '';
-    myProductionEngine.layoutName = '';
-    myProductionEngine.batchSize = 0;
-
-    rspStop.setErrcode(0);
-    rspStop.setErrmsg("ok");
     return rspStop;
 }
 
-function handleSubsPe() {
+async function handleSubsPe() {
     const rspSubsPe = new tpcp_schema.RspSubsPe();
     rspSubsPe.setErrcode(-1);
     rspSubsPe.setErrmsg("NotAssigned");
 
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.subscribeProdEngineStatus({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspSubsPe.setErrcode(val.errCode);
+        rspSubsPe.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    console.log("SubsPe");
-    prodEngineSubscription = true;
-    emitProductionEngineStatus();
-
-    rspSubsPe.setErrcode(0);
-    rspSubsPe.setErrmsg("ok");
     return rspSubsPe;
 }
 
-function handleSubsMagazineStatus() {
+async function handleSubsMagazineStatus() {
     const rspSubsMagazineStatus = new tpcp_schema.RspSubsMagazineStatus();
     rspSubsMagazineStatus.setErrcode(-1);
     rspSubsMagazineStatus.setErrmsg("NotAssigned");
 
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.subscribeMagazineStatus({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspSubsMagazineStatus.setErrcode(val.errCode);
+        rspSubsMagazineStatus.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    console.log("SubsMagazineStatus");
-    magSubscription = true;
-    emitMagasineStatus();
-
-    rspSubsMagazineStatus.setErrcode(0);
-    rspSubsMagazineStatus.setErrmsg("ok");
     return rspSubsMagazineStatus;
 }
 
-function handleSubsNotificationStatus() {
+async function handleSubsNotificationStatus() {
     const rspSubsNotificationStatus = new tpcp_schema.RspSubsNotificationStatus();
     rspSubsNotificationStatus.setErrcode(-1);
     rspSubsNotificationStatus.setErrmsg("NotAssigned");
 
 
-    console.log("SubsNotificationStatus");
-    notSubscription = true;
-    emitNotificationStatus();
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.subscribeNotificationStatus({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspSubsNotificationStatus.setErrcode(val.errCode);
+        rspSubsNotificationStatus.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    rspSubsNotificationStatus.setErrcode(0);
-    rspSubsNotificationStatus.setErrmsg("ok");
     return rspSubsNotificationStatus;
 }
 
-function handleNqrLoadBoard(cmdNqrLoadBoard) {
+async function handleNqrLoadBoard(cmdNqrLoadBoard) {
     const rspNqrLoadBoard = new tpcp_schema.RspNqrLoadBoard();
     rspNqrLoadBoard.setErrcode(-1);
     rspNqrLoadBoard.setErrmsg("NotAssigned");
 
+    p = new Promise( (resolve, reject) => {
+        tpcp0Client.cmdNqrLoadBoard({}, function (err, response) {
+            resolve(response);
+        });
+    });
+    p.then(val => {
+        rspNqrLoadBoard.setErrcode(val.errCode);
+        rspNqrLoadBoard.setErrmsg(val.errMsg);
+    });
+    await p;
 
-    console.log("NqrLoadBoard ok:", cmdNqrLoadBoard.getOk());
-    if(waitingForBoard) {
-        waitingForBoard = false;
-        removeNotification(100);
-
-        if(cmdNqrLoadBoard.getOk()) {
-            console.log('Board loaded')
-        } else {
-            console.log('Board not loaded, pause')
-            myProductionEngine.state = 'Paused';
-        }
-    }
-
-    rspNqrLoadBoard.setErrcode(0);
-    rspNqrLoadBoard.setErrmsg("ok");
     return rspNqrLoadBoard;
 }
 
@@ -418,9 +372,9 @@ function handleNqrLoadBoard(cmdNqrLoadBoard) {
  * Main
  */
 
-function sleep(millis) {
-    return new Promise(resolve => setTimeout(resolve, millis));
-}
+// function sleep(millis) {
+//     return new Promise(resolve => setTimeout(resolve, millis));
+// }
   
   
 machineId = '0';
